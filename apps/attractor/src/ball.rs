@@ -17,12 +17,12 @@ impl Ball {
             position,
             velocity: vec2(0.0, 0.0),
             _radius: radius,
-            air_resistance: 0.95,
+            air_resistance: 0.9,
         }
     }
 
-    pub fn update(&mut self) {
-        self.position += self.velocity;
-        self.velocity *= self.air_resistance;
+    pub fn update(&mut self, dt: f32) {
+        self.position += self.velocity * dt;
+        self.velocity *= self.air_resistance.powf(dt);
     }
 }
