@@ -1,0 +1,10 @@
+"$schema" = "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json"
+
+language = "en,ja"
+ignorePaths = ["Cargo.lock", "target"]
+dictionaries = ["summer-term-rust"]
+
+[[dictionaryDefinitions]]
+name = "summer-term-rust"
+path = "./cspell.txt"
+addWords = true
