@@ -7,16 +7,16 @@ use nannou::{
 pub struct Ball {
     pub position: Point2,
     pub velocity: Vec2,
-    pub radius: f32,
+    _radius: f32,
     air_resistance: f32,
 }
 
 impl Ball {
-    pub fn new(position: Point2) -> Self {
+    pub fn new(position: Point2, radius: f32) -> Self {
         Self {
             position,
             velocity: vec2(0.0, 0.0),
-            radius: 10.0,
+            _radius: radius,
             air_resistance: 0.95,
         }
     }

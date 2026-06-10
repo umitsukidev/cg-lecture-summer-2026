@@ -12,6 +12,8 @@ struct Model {
     balls: Vec<Ball>,
 }
 
+const BALL_COUNT: isize = 1000;
+
 fn model(app: &App) -> Model {
     let _window = app
         .new_window()
@@ -21,8 +23,8 @@ fn model(app: &App) -> Model {
         .mouse_released(mouse_released)
         .build()
         .unwrap();
-    let balls = (-10..10)
-        .map(|i| Ball::new(pt2(i as f32 * 30.0, 0.0)))
+    let balls = (-BALL_COUNT / 2..BALL_COUNT / 2)
+        .map(|i| Ball::new(pt2(i as f32, 0.0), 1.0))
         .collect();
     Model {
         _window,
@@ -36,7 +38,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         for ball in &mut model.balls {
             let mouse = app.mouse.position();
             let velocity = ball.position - mouse;
-            ball.velocity += velocity.normalize() * 0.1;
+            ball.velocity.y += velocity.normalize().y * 0.05;
         }
     }
     for ball in &mut model.balls {
@@ -46,11 +48,16 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
+    let mut prev_ball: Option<&Ball> = None;
     for ball in &model.balls {
-        draw.ellipse()
-            .xy(ball.position)
-            .radius(ball.radius)
-            .color(BLACK);
+        if let Some(pb) = prev_ball {
+            draw.line()
+                .start(ball.position)
+                .end(pb.position)
+                .weight(1.0)
+                .color(BLACK);
+        }
+        prev_ball = Some(ball);
     }
     draw.background().color(WHITE);
     draw.to_frame(app, &frame).unwrap();
