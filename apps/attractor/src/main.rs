@@ -15,12 +15,13 @@ struct Model {
 }
 
 const BALL_COUNT: isize = 1000;
-const LINE_COUNT: isize = 500;
+const LINE_COUNT: isize = 350;
 const TIME_SCALE: f32 = 0.5;
 
 fn model(app: &App) -> Model {
     let _window = app
         .new_window()
+        .size(1000, 1000)
         .view(view)
         .mouse_pressed(mouse_pressed)
         .mouse_released(mouse_released)
@@ -29,7 +30,7 @@ fn model(app: &App) -> Model {
     let ball_lines = (-LINE_COUNT / 2..LINE_COUNT / 2)
         .map(|i| {
             (-BALL_COUNT / 2..BALL_COUNT / 2)
-                .map(|j| Ball::new(pt2(j as f32, i as f32 * 5.0), 1.0))
+                .map(|j| Ball::new(pt2(j as f32, i as f32 * 3.0), 1.0))
                 .collect()
         })
         .collect();
