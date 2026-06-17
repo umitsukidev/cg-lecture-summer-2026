@@ -1128,6 +1128,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "metaball_exercise_a"
+version = "0.1.0"
+dependencies = [
+ "nannou",
+]
+
+[[package]]
+name = "metaball_exercise_b"
+version = "0.1.0"
+dependencies = [
+ "nannou",
+]
+
+[[package]]
 name = "metal"
 version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

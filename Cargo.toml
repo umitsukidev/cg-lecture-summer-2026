@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["apps/*"]
+members = ["apps/*", "apps/metaball/apps/*"]
 
 [workspace.package]
 edition = "2024"

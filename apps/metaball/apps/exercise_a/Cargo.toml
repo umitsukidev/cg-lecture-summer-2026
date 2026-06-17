@@ -1,0 +1,7 @@
+[package]
+name = "metaball_exercise_a"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nannou.workspace = true
