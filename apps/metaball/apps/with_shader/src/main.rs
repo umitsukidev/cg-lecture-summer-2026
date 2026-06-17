@@ -8,29 +8,15 @@ fn main() {
     nannou::app(model).update(update).run();
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct BallGPU {
-    position: [f32; 2],
-    radius: f32,
-    _pad: f32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct MetaballData {
-    num_balls: u32,
-    _pad0: u32,
-    _pad1: u32,
-    _pad2: u32,
-    balls: [BallGPU; 256],
-}
+use std::cell::RefCell;
 
 struct Model {
     window_id: window::Id,
     balls: Vec<ball::Ball>,
+    renderer: RefCell<nannou::draw::Renderer>,
+    texture: wgpu::Texture,
+    _texture_view: wgpu::TextureView,
     render_pipeline: wgpu::RenderPipeline,
-    uniform_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
 }
 
@@ -49,24 +35,36 @@ fn model(app: &App) -> Model {
     let window = app.window(window_id).unwrap();
     let device = window.device();
 
+    // Create the offscreen render target texture
+    let texture = wgpu::TextureBuilder::new()
+        .size([1024, 1024])
+        .format(Frame::TEXTURE_FORMAT)
+        .usage(wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING)
+        .sample_count(1)
+        .build(device);
+
+    let texture_view = texture.view().build();
+
+    // Create the custom renderer for drawing to the texture
+    let renderer = RefCell::new(nannou::draw::RendererBuilder::new().build(
+        device,
+        [1024, 1024],
+        window.scale_factor(),
+        1,
+        Frame::TEXTURE_FORMAT,
+    ));
+
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Metaball"),
         source: wgpu::ShaderSource::Wgsl(include_str!("shaders/metaball.wgsl").into()),
     });
 
-    let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("Metaball Bind Group Layout"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }],
-    });
+    let sampler = wgpu::SamplerBuilder::new().build(device);
+
+    let bind_group_layout = wgpu::BindGroupLayoutBuilder::new()
+        .texture_from(wgpu::ShaderStages::FRAGMENT, &texture)
+        .sampler(wgpu::ShaderStages::FRAGMENT, true)
+        .build(device);
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Metaball pipeline descriptor"),
@@ -82,27 +80,18 @@ fn model(app: &App) -> Model {
         .color_format(Frame::TEXTURE_FORMAT)
         .build(device);
 
-    let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Metaball Uniform Buffer"),
-        size: std::mem::size_of::<MetaballData>() as u64,
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-
-    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Metaball Bind Group"),
-        layout: &bind_group_layout,
-        entries: &[wgpu::BindGroupEntry {
-            binding: 0,
-            resource: uniform_buffer.as_entire_binding(),
-        }],
-    });
+    let bind_group = wgpu::BindGroupBuilder::new()
+        .texture_view(&texture_view)
+        .sampler(&sampler)
+        .build(device, &bind_group_layout);
 
     Model {
         window_id,
         balls,
+        renderer,
+        texture,
+        _texture_view: texture_view,
         render_pipeline,
-        uniform_buffer,
         bind_group,
     }
 }
@@ -111,41 +100,33 @@ fn update(_app: &App, _model: &mut Model, _update: Update) {}
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let window = app.window(model.window_id).unwrap();
-    let queue = window.queue();
+    let device = window.device();
 
-    // Prepare metaball data for the shader
-    let mut balls_gpu = [BallGPU {
-        position: [0.0, 0.0],
-        radius: 0.0,
-        _pad: 0.0,
-    }; 256];
-    let num_balls = model.balls.len().min(256);
-    for i in 0..num_balls {
-        balls_gpu[i] = BallGPU {
-            position: [model.balls[i].position.x, model.balls[i].position.y],
-            radius: model.balls[i].radius,
-            _pad: 0.0,
-        };
+    // 1. Draw original balls display logic using CPU draw to the offscreen texture
+    let draw = app.draw();
+    draw.background().color(WHITE);
+
+    for ball in &model.balls {
+        draw.ellipse()
+            .xy(ball.position)
+            .radius(ball.radius)
+            .color(BLACK);
     }
 
-    let metaball_data = MetaballData {
-        num_balls: num_balls as u32,
-        _pad0: 0,
-        _pad1: 0,
-        _pad2: 0,
-        balls: balls_gpu,
-    };
-
-    queue.write_buffer(&model.uniform_buffer, 0, bytemuck::bytes_of(&metaball_data));
-
     let mut encoder = frame.command_encoder();
+    model
+        .renderer
+        .borrow_mut()
+        .render_to_texture(device, &mut encoder, &draw, &model.texture);
+
+    // 2. Begin the screen pass to render our full-screen triangle post-process shader
     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("Metaball Render Pass"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
             view: frame.texture_view(),
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
                 store: true,
             },
         })],
@@ -166,4 +147,3 @@ fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
         _ => {}
     }
 }
-
