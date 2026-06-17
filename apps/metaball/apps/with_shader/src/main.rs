@@ -1,3 +1,22 @@
+use nannou::prelude::*;
+
 fn main() {
-    println!("Hello, world!");
+    nannou::app(model).update(update).run();
+}
+
+struct Model {
+    _window: window::Id,
+}
+
+fn model(app: &App) -> Model {
+    let _window = app.new_window().size(512, 512).view(view).build().unwrap();
+    Model { _window }
+}
+
+fn update(_app: &App, _model: &mut Model, _update: Update) {}
+
+fn view(app: &App, _model: &Model, frame: Frame) {
+    let draw = app.draw();
+    draw.background().color(PURPLE);
+    draw.to_frame(app, &frame).unwrap();
 }
