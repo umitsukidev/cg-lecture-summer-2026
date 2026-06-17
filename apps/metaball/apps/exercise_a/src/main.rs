@@ -3,7 +3,6 @@ use nannou::prelude::*;
 
 struct Model {
     texture: wgpu::Texture,
-    image_buffer: RgbaImage,
 }
 
 fn main() {
@@ -15,27 +14,36 @@ fn model(app: &App) -> Model {
 
     let width = 512;
     let height = 512;
-    let image_buffer = RgbaImage::new(width, height);
-
+    let mut image_buffer = RgbaImage::new(width, height);
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer.clone());
     let texture = wgpu::Texture::from_image(app, &dynamic_image);
 
-    Model {
-        texture,
-        image_buffer,
-    }
-}
+    // // random
+    // for x in 0..width {
+    //     for y in 0..height {
+    //         let value = random_range(0, 255);
+    //         image_buffer.put_pixel(x, y, Rgba([value, value, value, 255]));
+    //     }
+    // }
 
-fn update(app: &App, model: &mut Model, _update: Update) {
-    let width = model.image_buffer.width();
-    let height = model.image_buffer.height();
+    // stripe
+    for x in 0..width {
+        for y in 0..height {
+            if x % 3 == 0 {
+                image_buffer.put_pixel(x, y, Rgba([255, 255, 255, 255]));
+            } else {
+                image_buffer.put_pixel(x, y, Rgba([0, 0, 0, 255]));
+            }
+        }
+    }
 
     for x in 0..width {
         for y in 0..height {
-            let r = random_range(0, 255);
-            let g = random_range(0, 255);
-            let b = random_range(0, 255);
-            model.image_buffer.put_pixel(x, y, Rgba([r, g, b, 255]));
+            let mut pixel = *image_buffer.get_pixel(x, y);
+            if 100 < x && x <= 300 && 100 < y && y <= 300 {
+                pixel.0[2] = pixel.0[2].saturating_add(100);
+                image_buffer.put_pixel(x, y, pixel);
+            }
         }
     }
 
@@ -45,11 +53,14 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Texture Upload"),
     });
-    model
-        .texture
-        .upload_data(device, &mut encoder, model.image_buffer.as_raw());
+
+    texture.upload_data(device, &mut encoder, image_buffer.as_raw());
     queue.submit(Some(encoder.finish()));
+
+    Model { texture }
 }
+
+fn update(_app: &App, _model: &mut Model, _update: Update) {}
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
