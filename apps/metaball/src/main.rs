@@ -7,7 +7,7 @@ use crate::metaball::Metaball;
 
 struct Model {
     texture: wgpu::Texture,
-    metaballs: Vec<Metaball>,
+    _metaballs: Vec<Metaball>,
 }
 
 fn main() {
@@ -65,7 +65,10 @@ fn model(app: &App) -> Model {
     texture.upload_data(device, &mut encoder, image_buffer.as_raw());
     queue.submit(Some(encoder.finish()));
 
-    Model { texture, metaballs }
+    Model {
+        texture,
+        _metaballs: metaballs,
+    }
 }
 
 fn update(_app: &App, _model: &mut Model, _update: Update) {}
