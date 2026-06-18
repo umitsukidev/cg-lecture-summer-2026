@@ -3,6 +3,7 @@ AVFOUNDATION
 BGRA
 bytemuck
 DYLD
+farneback
 frontalface
 haarcascade
 haarcascades

@@ -10,6 +10,8 @@ struct Model {
     texture: wgpu::Texture,
     face_detector: objdetect::CascadeClassifier,
     faces: core::Vector<core::Rect>,
+    prev_gray: Option<core::Mat>,
+    avg_flow: Vec2,
 }
 
 fn main() {
@@ -64,6 +66,8 @@ fn model(app: &App) -> Model {
         texture,
         face_detector,
         faces,
+        prev_gray: None,
+        avg_flow: Vec2::ZERO,
     }
 }
 
@@ -106,6 +110,23 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     )
                     .expect("Failed to detect faces");
 
+                if let Some(ref prev_gray) = model.prev_gray {
+                    let mut flow = core::Mat::default();
+                    let flow_res = opencv::video::calc_optical_flow_farneback(
+                        prev_gray, &gray, &mut flow, 0.5, 3, 15, 3, 5, 1.2, 0,
+                    );
+
+                    if flow_res.is_ok() {
+                        if let Ok(mean) = core::mean(&flow, &core::no_array()) {
+                            let dx = mean[0] as f32;
+                            let dy = -mean[1] as f32; // Invert Y for Nannou
+                            model.avg_flow = vec2(dx, dy);
+                        }
+                    }
+                }
+
+                model.prev_gray = Some(gray.clone());
+
                 model
                     .texture
                     .upload_data(device, &mut encoder, rgba_image.as_raw());
@@ -136,6 +157,12 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .stroke_weight(4.0)
             .stroke_color(STEELBLUE);
     }
+
+    draw.line()
+        .start(pt2(0.0, 0.0))
+        .end(model.avg_flow * 100.0)
+        .color(STEELBLUE)
+        .stroke_weight(4.0);
 
     draw.to_frame(app, &frame).unwrap();
 }
