@@ -1,5 +1,5 @@
-mod opencv_utils;
 mod face_detector;
+mod opencv_utils;
 mod optical_flow;
 
 use nannou::prelude::*;
@@ -30,7 +30,6 @@ fn model(app: &App) -> Model {
     let (faces_tx, faces_rx) = channel::<face_detector::FaceDetectorResult>();
     let (flow_tx, flow_rx) = channel::<optical_flow::OpticalFlowResult>();
 
-    // Camera Capture Thread
     thread::spawn(move || {
         let mut cam = videoio::VideoCapture::new(0, videoio::CAP_AVFOUNDATION)
             .expect("Unable to open camera with AVFoundation");
@@ -62,7 +61,6 @@ fn model(app: &App) -> Model {
         }
     });
 
-    // Face Detector Thread
     thread::spawn(move || {
         let mut detector = face_detector::FaceDetector::new();
         let process_interval = Duration::from_millis(100);
@@ -93,7 +91,6 @@ fn model(app: &App) -> Model {
         }
     });
 
-    // Optical Flow Thread
     thread::spawn(move || {
         let mut flow_calc = optical_flow::OpticalFlow::new();
         let process_interval = Duration::from_millis(30);
@@ -111,7 +108,7 @@ fn model(app: &App) -> Model {
                 latest_frame = f;
             }
 
-            if let Ok(result) = flow_calc.get_flow(&latest_frame) {
+            if let Ok(result) = flow_calc.get_average_flow(&latest_frame) {
                 if flow_tx.send(result).is_err() {
                     break;
                 }
@@ -216,4 +213,3 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     draw.to_frame(app, &frame).unwrap();
 }
-
