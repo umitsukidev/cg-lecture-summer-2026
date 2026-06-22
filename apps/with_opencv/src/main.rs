@@ -5,6 +5,8 @@ mod optical_flow;
 use nannou::prelude::*;
 use opencv::{core, prelude::*, videoio};
 use opencv_utils::MatExt;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -16,20 +18,26 @@ struct Model {
     flow_receiver: Receiver<core::Mat>,
     faces: Vec<core::Rect>,
     flow: Option<core::Mat>,
+    running: Arc<AtomicBool>,
+    thread_handles: Vec<thread::JoinHandle<()>>,
 }
 
 fn main() {
-    nannou::app(model).update(update).run();
+    nannou::app(model).update(update).exit(exit).run();
 }
 
 fn model(app: &App) -> Model {
+    let running = Arc::new(AtomicBool::new(true));
+    let mut thread_handles = Vec::new();
+
     let (face_cam_tx, face_cam_rx) = std::sync::mpsc::sync_channel::<core::Mat>(1);
     let (flow_cam_tx, flow_cam_rx) = std::sync::mpsc::sync_channel::<core::Mat>(1);
     let (img_tx, img_rx) = channel::<nannou::image::RgbaImage>();
     let (faces_tx, faces_rx) = channel::<face_detector::FaceDetectorResult>();
     let (flow_tx, flow_rx) = channel::<core::Mat>();
 
-    thread::spawn(move || {
+    let running_capture = Arc::clone(&running);
+    let capture_handle = thread::spawn(move || {
         let mut cam = videoio::VideoCapture::new(0, videoio::CAP_AVFOUNDATION)
             .expect("Unable to open camera with AVFoundation");
 
@@ -39,7 +47,7 @@ fn model(app: &App) -> Model {
             panic!("Camera is not opened!");
         }
 
-        loop {
+        while running_capture.load(Ordering::Relaxed) {
             let mut raw_frame = Mat::default();
             if let Ok(true) = cam.read(&mut raw_frame) {
                 if raw_frame.size().map(|s| s.width > 0).unwrap_or(false) {
@@ -59,8 +67,9 @@ fn model(app: &App) -> Model {
             thread::sleep(Duration::from_millis(1));
         }
     });
+    thread_handles.push(capture_handle);
 
-    thread::spawn(move || {
+    let detector_handle = thread::spawn(move || {
         let mut detector = face_detector::FaceDetector::new();
         let process_interval = Duration::from_millis(100);
 
@@ -89,8 +98,9 @@ fn model(app: &App) -> Model {
             }
         }
     });
+    thread_handles.push(detector_handle);
 
-    thread::spawn(move || {
+    let flow_handle = thread::spawn(move || {
         let mut flow_calc = optical_flow::OpticalFlow::new();
         let process_interval = Duration::from_millis(30);
 
@@ -119,6 +129,7 @@ fn model(app: &App) -> Model {
             }
         }
     });
+    thread_handles.push(flow_handle);
 
     let first_image = img_rx.recv().expect("Failed to receive initial frame");
     let width = first_image.width();
@@ -141,6 +152,8 @@ fn model(app: &App) -> Model {
         flow_receiver: flow_rx,
         faces: Vec::new(),
         flow: None,
+        running,
+        thread_handles,
     }
 }
 
@@ -234,4 +247,17 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     draw.to_frame(app, &frame).unwrap();
+}
+
+fn exit(_app: &App, model: Model) {
+    model.running.store(false, Ordering::Relaxed);
+
+    // Drop receivers explicitly to wake up and exit threads blocked on sends
+    drop(model.image_receiver);
+    drop(model.faces_receiver);
+    drop(model.flow_receiver);
+
+    for handle in model.thread_handles {
+        let _ = handle.join();
+    }
 }
