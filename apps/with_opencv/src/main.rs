@@ -4,19 +4,18 @@ mod optical_flow;
 
 use nannou::prelude::*;
 use opencv::{core, prelude::*, videoio};
+use opencv_utils::MatExt;
 use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 use std::time::{Duration, Instant};
-
-use opencv_utils::MatExt;
 
 struct Model {
     texture: wgpu::Texture,
     image_receiver: Receiver<nannou::image::RgbaImage>,
     faces_receiver: Receiver<face_detector::FaceDetectorResult>,
-    flow_receiver: Receiver<optical_flow::OpticalFlowResult>,
+    flow_receiver: Receiver<core::Mat>,
     faces: Vec<core::Rect>,
-    avg_flow: Vec2,
+    flow: Option<core::Mat>,
 }
 
 fn main() {
@@ -28,7 +27,7 @@ fn model(app: &App) -> Model {
     let (flow_cam_tx, flow_cam_rx) = std::sync::mpsc::sync_channel::<core::Mat>(1);
     let (img_tx, img_rx) = channel::<nannou::image::RgbaImage>();
     let (faces_tx, faces_rx) = channel::<face_detector::FaceDetectorResult>();
-    let (flow_tx, flow_rx) = channel::<optical_flow::OpticalFlowResult>();
+    let (flow_tx, flow_rx) = channel::<core::Mat>();
 
     thread::spawn(move || {
         let mut cam = videoio::VideoCapture::new(0, videoio::CAP_AVFOUNDATION)
@@ -108,8 +107,8 @@ fn model(app: &App) -> Model {
                 latest_frame = f;
             }
 
-            if let Ok(result) = flow_calc.get_average_flow(&latest_frame) {
-                if flow_tx.send(result).is_err() {
+            if let Ok(flow) = flow_calc.get_flow(&latest_frame) {
+                if flow_tx.send(flow).is_err() {
                     break;
                 }
             }
@@ -141,7 +140,7 @@ fn model(app: &App) -> Model {
         faces_receiver: faces_rx,
         flow_receiver: flow_rx,
         faces: Vec::new(),
-        avg_flow: Vec2::ZERO,
+        flow: None,
     }
 }
 
@@ -179,7 +178,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         latest_flow = Some(flow);
     }
     if let Some(res) = latest_flow {
-        model.avg_flow = res.avg_flow;
+        model.flow = Some(res);
     }
 }
 
@@ -205,11 +204,37 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .stroke_color(STEELBLUE);
     }
 
-    draw.line()
-        .start(pt2(0.0, 0.0))
-        .end(model.avg_flow * 100.0)
-        .color(STEELBLUE)
-        .stroke_weight(4.0);
+    if let Some(ref flow) = model.flow {
+        // 全体の平均フローを動的に計算して描画
+        if let Ok(avg_flow) = optical_flow::OpticalFlow::get_average_flow(flow) {
+            draw.line()
+                .start(pt2(0.0, 0.0))
+                .end(avg_flow * 100.0)
+                .color(STEELBLUE)
+                .stroke_weight(4.0);
+        }
+
+        // 各顔の領域におけるオプティカルフローを動的に計算して描画
+        for face in model.faces.iter() {
+            if let Ok(face_flow) = optical_flow::OpticalFlow::get_average_flow_in_region(
+                flow,
+                vec2(face.x as f32, face.y as f32),
+                vec2(face.width as f32, face.height as f32),
+            ) {
+                let w = face.width as f32;
+                let h = face.height as f32;
+                let x = (face.x as f32 + w / 2.0) - (win_width / 2.0);
+                let y = (win_height / 2.0) - (face.y as f32 + h / 2.0);
+
+                // 顔の中心からフロー線を描画（区別のためREDを使用）
+                draw.line()
+                    .start(pt2(x, y))
+                    .end(pt2(x + face_flow.x * 100.0, y + face_flow.y * 100.0))
+                    .color(RED)
+                    .stroke_weight(4.0);
+            }
+        }
+    }
 
     draw.to_frame(app, &frame).unwrap();
 }
