@@ -205,7 +205,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     if let Some(ref flow) = model.flow {
-        // 全体の平均フローを動的に計算して描画
         if let Ok(avg_flow) = optical_flow::OpticalFlow::get_average_flow(flow) {
             draw.line()
                 .start(pt2(0.0, 0.0))
@@ -214,7 +213,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .stroke_weight(4.0);
         }
 
-        // 各顔の領域におけるオプティカルフローを動的に計算して描画
         for face in model.faces.iter() {
             if let Ok(face_flow) = optical_flow::OpticalFlow::get_average_flow_in_region(
                 flow,
@@ -226,7 +224,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 let x = (face.x as f32 + w / 2.0) - (win_width / 2.0);
                 let y = (win_height / 2.0) - (face.y as f32 + h / 2.0);
 
-                // 顔の中心からフロー線を描画（区別のためREDを使用）
                 draw.line()
                     .start(pt2(x, y))
                     .end(pt2(x + face_flow.x * 100.0, y + face_flow.y * 100.0))
