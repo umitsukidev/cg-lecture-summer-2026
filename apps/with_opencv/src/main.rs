@@ -2,7 +2,7 @@ mod opencv_utils;
 
 use nannou::prelude::*;
 use opencv::{core, objdetect, prelude::*, videoio};
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -60,14 +60,16 @@ fn model(app: &App) -> Model {
         }
     });
 
-    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let face_cascade_path =
-        manifest_dir.join("assets/haarcascades/haarcascade_frontalface_default.xml");
-    let face_cascade_path_str = face_cascade_path.to_str().unwrap().to_string();
-
     thread::spawn(move || {
-        let mut face_detector = objdetect::CascadeClassifier::new(&face_cascade_path_str)
-            .expect("Failed to load face cascade");
+        let mut face_detector = {
+            let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+            let face_cascade_path =
+                manifest_dir.join("assets/haarcascades/haarcascade_frontalface_default.xml");
+            let face_cascade_path_str = face_cascade_path.to_str().unwrap().to_string();
+
+            objdetect::CascadeClassifier::new(&face_cascade_path_str)
+                .expect("Failed to load face cascade")
+        };
         let mut faces = core::Vector::<core::Rect>::new();
         let mut prev_gray: Option<core::Mat> = None;
         let process_interval = Duration::from_millis(100);
@@ -95,17 +97,15 @@ fn model(app: &App) -> Model {
             )
             .is_ok()
             {
-                face_detector
-                    .detect_multi_scale(
-                        &gray,
-                        &mut faces,
-                        1.1,
-                        3,
-                        0,
-                        core::Size::new(30, 30),
-                        core::Size::new(0, 0),
-                    )
-                    .expect("Failed to detect faces");
+                let _ = face_detector.detect_multi_scale(
+                    &gray,
+                    &mut faces,
+                    1.1,
+                    3,
+                    0,
+                    core::Size::new(30, 30),
+                    core::Size::new(0, 0),
+                );
 
                 let mut avg_flow = Vec2::ZERO;
                 if let Some(ref prev_gray) = prev_gray {
