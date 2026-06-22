@@ -19,6 +19,7 @@ multisampled
 nannou
 objdetect
 Rainer
+rustflags
 skytree
 STEELBLUE
 thresholding

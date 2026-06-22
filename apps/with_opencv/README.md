@@ -2,9 +2,8 @@
 
 ## Requirement
 
-- Open CV C++ Library
+- Open CV
 - clang
-- mise
 - Xcode Command Line Tools
 
 ## About training data
@@ -18,4 +17,4 @@
 > [!TIP]
 > **環境変数について**\
 > [opencv-rust](https://github.com/twistedfall/opencv-rust#environment-variables) を参照してください\
-> `mise.toml`で設定するとグローバル汚染しなくて楽です。
+> `[project_root]/.cargo/config.toml`で設定するとグローバル汚染しなくて楽です。

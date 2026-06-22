@@ -1,0 +1,11 @@
+[target.aarch64-apple-darwin]
+rustflags = [
+    "-C",
+    "link-arg=-Wl,-rpath,/Library/Developer/CommandLineTools/usr/lib",
+]
+
+[target.x86_64-apple-darwin]
+rustflags = [
+    "-C",
+    "link-arg=-Wl,-rpath,/Library/Developer/CommandLineTools/usr/lib",
+]
