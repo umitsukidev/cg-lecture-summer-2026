@@ -2,6 +2,8 @@ mod face_detector;
 mod opencv_utils;
 mod optical_flow;
 
+use crate::face_detector::{FaceDetector, FaceDetectorResult};
+use crate::optical_flow::OpticalFlow;
 use nannou::prelude::*;
 use opencv::{core, prelude::*, videoio};
 use opencv_utils::MatExt;
@@ -14,7 +16,7 @@ use std::time::{Duration, Instant};
 struct Model {
     texture: wgpu::Texture,
     image_receiver: Receiver<nannou::image::RgbaImage>,
-    faces_receiver: Receiver<face_detector::FaceDetectorResult>,
+    faces_receiver: Receiver<FaceDetectorResult>,
     flow_receiver: Receiver<core::Mat>,
     faces: Vec<core::Rect>,
     flow: Option<core::Mat>,
@@ -33,7 +35,7 @@ fn model(app: &App) -> Model {
     let (face_cam_tx, face_cam_rx) = std::sync::mpsc::sync_channel::<core::Mat>(1);
     let (flow_cam_tx, flow_cam_rx) = std::sync::mpsc::sync_channel::<core::Mat>(1);
     let (img_tx, img_rx) = channel::<nannou::image::RgbaImage>();
-    let (faces_tx, faces_rx) = channel::<face_detector::FaceDetectorResult>();
+    let (faces_tx, faces_rx) = channel::<FaceDetectorResult>();
     let (flow_tx, flow_rx) = channel::<core::Mat>();
 
     let running_capture = Arc::clone(&running);
@@ -70,7 +72,7 @@ fn model(app: &App) -> Model {
     thread_handles.push(capture_handle);
 
     let detector_handle = thread::spawn(move || {
-        let mut detector = face_detector::FaceDetector::new();
+        let mut detector = FaceDetector::new();
         let process_interval = Duration::from_millis(100);
 
         loop {
@@ -101,7 +103,7 @@ fn model(app: &App) -> Model {
     thread_handles.push(detector_handle);
 
     let flow_handle = thread::spawn(move || {
-        let mut flow_calc = optical_flow::OpticalFlow::new();
+        let mut flow_calc = OpticalFlow::new();
         let process_interval = Duration::from_millis(30);
 
         loop {
@@ -218,7 +220,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     if let Some(flow) = &model.flow {
-        if let Ok(avg_flow) = optical_flow::OpticalFlow::get_average_flow(flow) {
+        if let Ok(avg_flow) = OpticalFlow::get_average_flow(flow) {
             draw.line()
                 .start(pt2(0.0, 0.0))
                 .end(avg_flow * 100.0)
@@ -227,7 +229,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
 
         for face in model.faces.iter() {
-            if let Ok(face_flow) = optical_flow::OpticalFlow::get_average_flow_in_region(
+            if let Ok(face_flow) = OpticalFlow::get_average_flow_in_region(
                 flow,
                 vec2(face.x as f32, face.y as f32),
                 vec2(face.width as f32, face.height as f32),
