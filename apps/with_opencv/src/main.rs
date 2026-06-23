@@ -22,6 +22,7 @@ struct Model {
     flow: Option<core::Mat>,
     running: Arc<AtomicBool>,
     thread_handles: Vec<thread::JoinHandle<()>>,
+    cam_size: Vec2,
 }
 
 fn main() {
@@ -136,8 +137,18 @@ fn model(app: &App) -> Model {
     let first_image = img_rx.recv().expect("Failed to receive initial frame");
     let width = first_image.width();
     let height = first_image.height();
+    let cam_size = vec2(width as f32, height as f32);
 
-    let _window = app.new_window().size(width, height).view(view).build();
+    // Scale down the initial window size to fit comfortably on most screens
+    let max_width = 1280.0;
+    let max_height = 720.0;
+    let scale = (max_width / width as f32)
+        .min(max_height / height as f32)
+        .min(1.0);
+    let win_w = (width as f32 * scale) as u32;
+    let win_h = (height as f32 * scale) as u32;
+
+    let _window = app.new_window().size(win_w, win_h).view(view).build();
 
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(first_image);
     let image = Image::from_dynamic(
@@ -156,6 +167,7 @@ fn model(app: &App) -> Model {
         flow: None,
         running,
         thread_handles,
+        cam_size,
     }
 }
 
@@ -199,15 +211,31 @@ fn view(app: &App, model: &Model) {
     let win_width = win_rect.w();
     let win_height = win_rect.h();
 
-    draw.rect()
-        .w_h(win_width, win_height)
-        .texture(&model.texture);
+    let cam_aspect = model.cam_size.x / model.cam_size.y;
+    let win_aspect = win_width / win_height;
+
+    let (draw_w, draw_h) = if win_aspect > cam_aspect {
+        (win_height * cam_aspect, win_height)
+    } else {
+        (win_width, win_width / cam_aspect)
+    };
+
+    draw.rect().w_h(draw_w, draw_h).texture(&model.texture);
+
+    let scale_x = draw_w / model.cam_size.x;
+    let scale_y = draw_h / model.cam_size.y;
 
     for face in model.faces.iter() {
-        let w = face.width as f32;
-        let h = face.height as f32;
-        let x = (face.x as f32 + w / 2.0) - (win_width / 2.0);
-        let y = (win_height / 2.0) - (face.y as f32 + h / 2.0);
+        let w = face.width as f32 * scale_x;
+        let h = face.height as f32 * scale_y;
+
+        // Calculate center of face in camera space
+        let face_center_x = face.x as f32 + face.width as f32 / 2.0;
+        let face_center_y = face.y as f32 + face.height as f32 / 2.0;
+
+        // Map to drawing coordinates (relative to the center of draw_rect)
+        let x = (face_center_x - model.cam_size.x / 2.0) * scale_x;
+        let y = (model.cam_size.y / 2.0 - face_center_y) * scale_y;
 
         draw.rect()
             .x_y(x, y)
@@ -234,15 +262,20 @@ fn view(app: &App, model: &Model) {
                 vec2(face.x as f32, face.y as f32),
                 vec2(face.width as f32, face.height as f32),
             ) {
-                let w = face.width as f32;
-                let h = face.height as f32;
-                let x = (face.x as f32 + w / 2.0) - (win_width / 2.0);
-                let y = (win_height / 2.0) - (face.y as f32 + h / 2.0);
+                // Calculate face center drawing coordinates
+                let face_center_x = face.x as f32 + face.width as f32 / 2.0;
+                let face_center_y = face.y as f32 + face.height as f32 / 2.0;
+                let x = (face_center_x - model.cam_size.x / 2.0) * scale_x;
+                let y = (model.cam_size.y / 2.0 - face_center_y) * scale_y;
 
                 if face_flow.length_squared() > 1e-6 {
+                    let flow_scale = 100.0 * scale_x;
                     draw.line()
                         .start(pt2(x, y))
-                        .end(pt2(x + face_flow.x * 100.0, y + face_flow.y * 100.0))
+                        .end(pt2(
+                            x + face_flow.x * flow_scale,
+                            y + face_flow.y * flow_scale,
+                        ))
                         .color(RED)
                         .stroke_weight(4.0);
                 }
