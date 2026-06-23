@@ -217,11 +217,13 @@ fn view(app: &App, model: &Model) {
 
     if let Some(flow) = &model.flow {
         if let Ok(avg_flow) = OpticalFlow::get_average_flow(flow) {
-            draw.line()
-                .start(pt2(0.0, 0.0))
-                .end(avg_flow * 100.0)
-                .color(STEEL_BLUE)
-                .stroke_weight(4.0);
+            if avg_flow.length_squared() > 1e-6 {
+                draw.line()
+                    .start(pt2(0.0, 0.0))
+                    .end(avg_flow * 100.0)
+                    .color(STEEL_BLUE)
+                    .stroke_weight(4.0);
+            }
         }
 
         for face in model.faces.iter() {
@@ -235,11 +237,13 @@ fn view(app: &App, model: &Model) {
                 let x = (face.x as f32 + w / 2.0) - (win_width / 2.0);
                 let y = (win_height / 2.0) - (face.y as f32 + h / 2.0);
 
-                draw.line()
-                    .start(pt2(x, y))
-                    .end(pt2(x + face_flow.x * 100.0, y + face_flow.y * 100.0))
-                    .color(RED)
-                    .stroke_weight(4.0);
+                if face_flow.length_squared() > 1e-6 {
+                    draw.line()
+                        .start(pt2(x, y))
+                        .end(pt2(x + face_flow.x * 100.0, y + face_flow.y * 100.0))
+                        .color(RED)
+                        .stroke_weight(4.0);
+                }
             }
         }
     }
