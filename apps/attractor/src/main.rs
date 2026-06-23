@@ -9,7 +9,7 @@ fn main() {
 }
 
 struct Model {
-    _window: window::Id,
+    _window: Entity,
     mouse_left_pressed: bool,
     ball_lines: Vec<Vec<Ball>>,
 }
@@ -25,8 +25,7 @@ fn model(app: &App) -> Model {
         .view(view)
         .mouse_pressed(mouse_pressed)
         .mouse_released(mouse_released)
-        .build()
-        .unwrap();
+        .build();
     let ball_lines = (-LINE_COUNT / 2..LINE_COUNT / 2)
         .map(|i| {
             (-BALL_COUNT / 2..BALL_COUNT / 2)
@@ -41,8 +40,8 @@ fn model(app: &App) -> Model {
     }
 }
 
-fn update(app: &App, model: &mut Model, _update: Update) {
-    let mouse = app.mouse.position();
+fn update(app: &App, model: &mut Model) {
+    let mouse = app.mouse();
     let mouse_left_pressed = model.mouse_left_pressed;
     let dt = TIME_SCALE;
 
@@ -67,20 +66,19 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     });
 }
 
-fn view(app: &App, model: &Model, frame: Frame) {
+fn view(app: &App, model: &Model) {
     let draw = app.draw();
     draw.background().color(WHITE);
     let total_lines = model.ball_lines.len();
     for (i, ball_line) in model.ball_lines.iter().enumerate() {
         let t = i as f32 / (total_lines - 1) as f32;
         let hue = 0.83 - t * 0.37;
-        let color = hsv(hue, 1.0, 1.0);
+        let color = Color::hsv(hue * 360.0, 1.0, 1.0);
         draw.polyline()
             .weight(1.0)
             .points(ball_line.iter().map(|b| b.position))
             .color(color);
     }
-    draw.to_frame(app, &frame).unwrap();
 }
 
 fn mouse_pressed(_app: &App, model: &mut Model, button: MouseButton) {

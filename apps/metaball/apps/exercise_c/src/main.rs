@@ -2,7 +2,7 @@ use nannou::image::Rgba;
 use nannou::prelude::*;
 
 struct Model {
-    texture: wgpu::Texture,
+    texture: Handle<Image>,
 }
 
 fn main() {
@@ -14,8 +14,7 @@ fn model(app: &App) -> Model {
         .new_window()
         .size(1000, 1000)
         .view(view)
-        .build()
-        .unwrap();
+        .build();
 
     let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
     let img_path = assets.join("images/skytree.jpg");
@@ -70,15 +69,15 @@ fn model(app: &App) -> Model {
     }
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(new_image_buffer);
 
-    let texture = wgpu::Texture::from_image(app, &dynamic_image);
-
+    let image = Image::from_dynamic(dynamic_image, true, bevy_asset::RenderAssetUsages::default());
+    let texture = app.asset_server().add(image);
+ 
     Model { texture }
 }
 
-fn update(_app: &App, _model: &mut Model, _update: Update) {}
+fn update(_app: &App, _model: &mut Model) {}
 
-fn view(app: &App, model: &Model, frame: Frame) {
+fn view(app: &App, model: &Model) {
     let draw = app.draw();
-    draw.texture(&model.texture);
-    draw.to_frame(app, &frame).unwrap();
+    draw.rect().w_h(1000.0, 1000.0).texture(&model.texture);
 }

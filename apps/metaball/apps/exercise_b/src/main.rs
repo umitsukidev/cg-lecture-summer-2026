@@ -2,7 +2,7 @@ use nannou::image::{Rgba, RgbaImage};
 use nannou::prelude::*;
 
 struct Model {
-    texture: wgpu::Texture,
+    texture: Handle<Image>,
     image_buffer: RgbaImage,
 }
 
@@ -11,14 +11,15 @@ fn main() {
 }
 
 fn model(app: &App) -> Model {
-    let _window = app.new_window().size(512, 512).view(view).build().unwrap();
+    let _window = app.new_window().size(512, 512).view(view).build();
 
     let width = 512;
     let height = 512;
     let image_buffer = RgbaImage::new(width, height);
 
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer.clone());
-    let texture = wgpu::Texture::from_image(app, &dynamic_image);
+    let image = Image::from_dynamic(dynamic_image, true, bevy_asset::RenderAssetUsages::default());
+    let texture = app.asset_server().add(image);
 
     Model {
         texture,
@@ -26,7 +27,7 @@ fn model(app: &App) -> Model {
     }
 }
 
-fn update(app: &App, model: &mut Model, _update: Update) {
+fn update(app: &App, model: &mut Model) {
     let width = model.image_buffer.width();
     let height = model.image_buffer.height();
 
@@ -46,20 +47,13 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         }
     }
 
-    let window = app.main_window();
-    let device = window.device();
-    let queue = window.queue();
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Texture Upload"),
+    let pixels = model.image_buffer.as_raw().clone();
+    app.modify_image(&model.texture, move |image| {
+        image.data = Some(pixels);
     });
-    model
-        .texture
-        .upload_data(device, &mut encoder, model.image_buffer.as_raw());
-    queue.submit(Some(encoder.finish()));
 }
 
-fn view(app: &App, model: &Model, frame: Frame) {
+fn view(app: &App, model: &Model) {
     let draw = app.draw();
-    draw.texture(&model.texture);
-    draw.to_frame(app, &frame).unwrap();
+    draw.rect().w_h(512.0, 512.0).texture(&model.texture);
 }

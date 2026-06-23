@@ -6,7 +6,7 @@ use nannou::prelude::*;
 use crate::metaball::Metaball;
 
 struct Model {
-    texture: wgpu::Texture,
+    texture: Handle<Image>,
     _metaballs: Vec<Metaball>,
 }
 
@@ -19,8 +19,7 @@ fn model(app: &App) -> Model {
         .new_window()
         .size(1024, 1024)
         .view(view)
-        .build()
-        .unwrap();
+        .build();
 
     let width = 1024;
     let height = 1024;
@@ -37,8 +36,6 @@ fn model(app: &App) -> Model {
     ];
 
     let mut image_buffer = RgbaImage::new(width, height);
-    let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer.clone());
-    let texture = wgpu::Texture::from_image(app, &dynamic_image);
 
     for x in 0..width {
         for y in 0..height {
@@ -55,15 +52,9 @@ fn model(app: &App) -> Model {
         }
     }
 
-    let window = app.main_window();
-    let device = window.device();
-    let queue = window.queue();
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Texture Upload"),
-    });
-
-    texture.upload_data(device, &mut encoder, image_buffer.as_raw());
-    queue.submit(Some(encoder.finish()));
+    let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer);
+    let image = Image::from_dynamic(dynamic_image, true, bevy_asset::RenderAssetUsages::default());
+    let texture = app.asset_server().add(image);
 
     Model {
         texture,
@@ -71,13 +62,15 @@ fn model(app: &App) -> Model {
     }
 }
 
-fn update(_app: &App, _model: &mut Model, _update: Update) {}
+fn update(_app: &App, _model: &mut Model) {}
 
-fn view(app: &App, model: &Model, frame: Frame) {
+fn view(app: &App, model: &Model) {
     let draw = app.draw();
     draw.background().color(BLACK);
 
-    draw.texture(&model.texture);
+    draw.rect()
+        .w_h(1024.0, 1024.0)
+        .texture(&model.texture);
 
     // for metaball in model.metaballs.iter() {
     //     draw.ellipse()
@@ -85,8 +78,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
     //         .radius(metaball.radius)
     //         .color(BLACK);
     // }
-
-    draw.to_frame(app, &frame).unwrap();
 }
 
 fn quantize_n_levels(value: u8, n: u8) -> u8 {

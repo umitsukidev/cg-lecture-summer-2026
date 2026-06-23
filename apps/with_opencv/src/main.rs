@@ -7,17 +7,17 @@ use crate::optical_flow::OpticalFlow;
 use nannou::prelude::*;
 use opencv::{core, prelude::*, videoio};
 use opencv_utils::MatExt;
-use std::sync::Arc;
+use std::sync::{Mutex, Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 use std::time::{Duration, Instant};
 
 struct Model {
-    texture: wgpu::Texture,
-    image_receiver: Receiver<nannou::image::RgbaImage>,
-    faces_receiver: Receiver<FaceDetectorResult>,
-    flow_receiver: Receiver<core::Mat>,
+    texture: Handle<Image>,
+    image_receiver: Mutex<Receiver<nannou::image::RgbaImage>>,
+    faces_receiver: Mutex<Receiver<FaceDetectorResult>>,
+    flow_receiver: Mutex<Receiver<core::Mat>>,
     faces: Vec<core::Rect>,
     flow: Option<core::Mat>,
     running: Arc<AtomicBool>,
@@ -141,17 +141,17 @@ fn model(app: &App) -> Model {
         .new_window()
         .size(width, height)
         .view(view)
-        .build()
-        .unwrap();
+        .build();
 
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(first_image);
-    let texture = wgpu::Texture::from_image(app, &dynamic_image);
+    let image = Image::from_dynamic(dynamic_image, true, bevy_asset::RenderAssetUsages::default());
+    let texture = app.asset_server().add(image);
 
     Model {
         texture,
-        image_receiver: img_rx,
-        faces_receiver: faces_rx,
-        flow_receiver: flow_rx,
+        image_receiver: Mutex::new(img_rx),
+        faces_receiver: Mutex::new(faces_rx),
+        flow_receiver: Mutex::new(flow_rx),
         faces: Vec::new(),
         flow: None,
         running,
@@ -159,29 +159,23 @@ fn model(app: &App) -> Model {
     }
 }
 
-fn update(app: &App, model: &mut Model, _update: Update) {
+fn update(app: &App, model: &mut Model) {
     let mut latest_image = None;
-    while let Ok(img) = model.image_receiver.try_recv() {
+    let rx_img = model.image_receiver.get_mut().unwrap();
+    while let Ok(img) = rx_img.try_recv() {
         latest_image = Some(img);
     }
 
     if let Some(img) = latest_image {
-        let window = app.main_window();
-        let device = window.device();
-        let queue = window.queue();
-
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Texture Upload"),
+        let pixels = img.as_raw().clone();
+        app.modify_image(&model.texture, move |image| {
+            image.data = Some(pixels);
         });
-
-        model
-            .texture
-            .upload_data(device, &mut encoder, img.as_raw());
-        queue.submit(Some(encoder.finish()));
     }
 
     let mut latest_faces = None;
-    while let Ok(faces) = model.faces_receiver.try_recv() {
+    let rx_faces = model.faces_receiver.get_mut().unwrap();
+    while let Ok(faces) = rx_faces.try_recv() {
         latest_faces = Some(faces);
     }
     if let Some(res) = latest_faces {
@@ -189,7 +183,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     let mut latest_flow = None;
-    while let Ok(flow) = model.flow_receiver.try_recv() {
+    let rx_flow = model.flow_receiver.get_mut().unwrap();
+    while let Ok(flow) = rx_flow.try_recv() {
         latest_flow = Some(flow);
     }
     if let Some(res) = latest_flow {
@@ -197,13 +192,14 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 }
 
-fn view(app: &App, model: &Model, frame: Frame) {
+fn view(app: &App, model: &Model) {
     let draw = app.draw();
-    draw.texture(&model.texture);
 
     let win_rect = app.window_rect();
     let win_width = win_rect.w();
     let win_height = win_rect.h();
+
+    draw.rect().w_h(win_width, win_height).texture(&model.texture);
 
     for face in model.faces.iter() {
         let w = face.width as f32;
@@ -216,7 +212,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .w_h(w, h)
             .no_fill()
             .stroke_weight(4.0)
-            .stroke_color(STEELBLUE);
+            .stroke_color(STEEL_BLUE);
     }
 
     if let Some(flow) = &model.flow {
@@ -224,7 +220,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             draw.line()
                 .start(pt2(0.0, 0.0))
                 .end(avg_flow * 100.0)
-                .color(STEELBLUE)
+                .color(STEEL_BLUE)
                 .stroke_weight(4.0);
         }
 
@@ -247,8 +243,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
             }
         }
     }
-
-    draw.to_frame(app, &frame).unwrap();
 }
 
 fn exit(_app: &App, model: Model) {
