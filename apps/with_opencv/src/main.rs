@@ -206,6 +206,7 @@ fn update(app: &App, model: &mut Model) {
 
 fn view(app: &App, model: &Model) {
     let draw = app.draw();
+    draw.background().color(BLACK);
 
     let win_rect = app.window_rect();
     let win_width = win_rect.w();
