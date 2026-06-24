@@ -3394,6 +3394,7 @@ name = "metaball"
 version = "0.1.0"
 dependencies = [
  "nannou",
+ "rayon",
 ]
 
 [[package]]
