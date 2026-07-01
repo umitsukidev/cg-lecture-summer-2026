@@ -1,8 +1,12 @@
+mod ball;
 mod face_detector;
+mod nannou_utils;
 mod opencv_utils;
 mod optical_flow;
 
+use crate::ball::Ball;
 use crate::face_detector::{FaceDetector, FaceDetectorResult};
+use crate::nannou_utils::Point2Ext;
 use crate::optical_flow::OpticalFlow;
 use nannou::prelude::*;
 use opencv::{core, prelude::*, videoio};
@@ -19,10 +23,12 @@ struct Model {
     faces_receiver: Mutex<Receiver<FaceDetectorResult>>,
     flow_receiver: Mutex<Receiver<core::Mat>>,
     faces: Vec<core::Rect>,
+    // face_image: Handle<Image>,
     flow: Option<core::Mat>,
     running: Arc<AtomicBool>,
     thread_handles: Vec<thread::JoinHandle<()>>,
     cam_size: Vec2,
+    ball: Ball,
 }
 
 fn main() {
@@ -158,6 +164,24 @@ fn model(app: &App) -> Model {
     );
     let texture = app.asset_server().add(image);
 
+    // let face_image = {
+    //     let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    //     let image_path = manifest_dir.join("assets/images/face_filter.png");
+    //     let image_path_str = image_path.to_str().unwrap().to_string();
+
+    //     let image_buffer = nannou::image::open(&image_path_str)
+    //         .expect("Failed to open image")
+    //         .into_rgba8();
+    //     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer);
+
+    //     let image = Image::from_dynamic(
+    //         dynamic_image,
+    //         true,
+    //         bevy_asset::RenderAssetUsages::default(),
+    //     );
+    //     app.asset_server().add(image)
+    // };
+
     Model {
         texture,
         image_receiver: Mutex::new(img_rx),
@@ -167,7 +191,12 @@ fn model(app: &App) -> Model {
         flow: None,
         running,
         thread_handles,
+        // face_image,
         cam_size,
+        ball: Ball {
+            position: vec2(0.0, 0.0),
+            radius: 50.0,
+        },
     }
 }
 
@@ -202,6 +231,32 @@ fn update(app: &App, model: &mut Model) {
     if let Some(res) = latest_flow {
         model.flow = Some(res);
     }
+
+    if let Some(flow) = &model.flow {
+        if let Ok(ball_flow) = {
+            let ball_position = model
+                .ball
+                .position
+                .translate_to_screen_coords(app.window_rect());
+            OpticalFlow::get_average_flow_in_region(
+                flow,
+                Rect::from_xy_wh(
+                    ball_position,
+                    vec2(2.0 * model.ball.radius, 2.0 * model.ball.radius),
+                ),
+            )
+        } {
+            model.ball.position += ball_flow;
+        };
+    }
+    // let frame_count = app.elapsed_frames();
+    // if frame_count % 4 == 0 {
+    //     let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    //     let save_path = manifest_dir.join(format!("outputs/{:0>5}.png", frame_count / 4));
+    //     let save_path_str = save_path.to_str().unwrap().to_string();
+
+    //     app.main_window().save_screenshot(save_path_str);
+    // }
 }
 
 fn view(app: &App, model: &Model) {
@@ -223,66 +278,63 @@ fn view(app: &App, model: &Model) {
 
     draw.rect().w_h(draw_w, draw_h).texture(&model.texture);
 
-    let scale_x = draw_w / model.cam_size.x;
-    let scale_y = draw_h / model.cam_size.y;
+    draw.ellipse()
+        .xy(model.ball.position)
+        .radius(model.ball.radius)
+        .color(WHITE);
 
-    for face in model.faces.iter() {
-        let w = face.width as f32 * scale_x;
-        let h = face.height as f32 * scale_y;
+    // for face in model.faces.iter() {
+    //     let face_center = {
+    //         let center = vec2(
+    //             face.x as f32 + face.width as f32 / 2.0,
+    //             face.y as f32 + face.height as f32 / 2.0,
+    //         );
+    //         (center - model.cam_size / 2.0) * vec2(scale_x, -scale_y)
+    //     };
 
-        // Calculate center of face in camera space
-        let face_center_x = face.x as f32 + face.width as f32 / 2.0;
-        let face_center_y = face.y as f32 + face.height as f32 / 2.0;
+    //     draw.rect()
+    //         .texture(&model.face_image)
+    //         .xy(face_center)
+    //         .wh(pt2(face.width as f32, face.height as f32));
+    // }
 
-        // Map to drawing coordinates (relative to the center of draw_rect)
-        let x = (face_center_x - model.cam_size.x / 2.0) * scale_x;
-        let y = (model.cam_size.y / 2.0 - face_center_y) * scale_y;
+    // if let Some(flow) = &model.flow {
+    //     if let Ok(avg_flow) = OpticalFlow::get_average_flow(flow) {
+    //         if avg_flow.length_squared() > 1e-6 {
+    //             draw.line()
+    //                 .start(pt2(0.0, 0.0))
+    //                 .end(avg_flow * 100.0)
+    //                 .color(STEEL_BLUE)
+    //                 .stroke_weight(4.0);
+    //         }
+    //     }
 
-        draw.rect()
-            .x_y(x, y)
-            .w_h(w, h)
-            .no_fill()
-            .stroke_weight(4.0)
-            .stroke_color(STEEL_BLUE);
-    }
+    //     for face in model.faces.iter() {
 
-    if let Some(flow) = &model.flow {
-        if let Ok(avg_flow) = OpticalFlow::get_average_flow(flow) {
-            if avg_flow.length_squared() > 1e-6 {
-                draw.line()
-                    .start(pt2(0.0, 0.0))
-                    .end(avg_flow * 100.0)
-                    .color(STEEL_BLUE)
-                    .stroke_weight(4.0);
-            }
-        }
+    //         if let Ok(face_flow) = OpticalFlow::get_average_flow_in_region(
+    //             flow,
+    //             vec2(face.x as f32, face.y as f32),
+    //             vec2(face.width as f32, face.height as f32),
+    //         ) {
+    //             // Calculate face center drawing coordinates
+    //             let face_center_x = face.x as f32 + face.width as f32 / 2.0;
+    //             let face_center_y = face.y as f32 + face.height as f32 / 2.0;
+    //             let x = (face_center_x - model.cam_size.x / 2.0) * scale_x;
+    //             let y = (model.cam_size.y / 2.0 - face_center_y) * scale_y;
 
-        for face in model.faces.iter() {
-            if let Ok(face_flow) = OpticalFlow::get_average_flow_in_region(
-                flow,
-                vec2(face.x as f32, face.y as f32),
-                vec2(face.width as f32, face.height as f32),
-            ) {
-                // Calculate face center drawing coordinates
-                let face_center_x = face.x as f32 + face.width as f32 / 2.0;
-                let face_center_y = face.y as f32 + face.height as f32 / 2.0;
-                let x = (face_center_x - model.cam_size.x / 2.0) * scale_x;
-                let y = (model.cam_size.y / 2.0 - face_center_y) * scale_y;
-
-                if face_flow.length_squared() > 1e-6 {
-                    let flow_scale = 100.0 * scale_x;
-                    draw.line()
-                        .start(pt2(x, y))
-                        .end(pt2(
-                            x + face_flow.x * flow_scale,
-                            y + face_flow.y * flow_scale,
-                        ))
-                        .color(RED)
-                        .stroke_weight(4.0);
-                }
-            }
-        }
-    }
+    //             if face_flow.length_squared() > 1e-6 {
+    //                 let flow_scale = 100.0 * scale_x;
+    //                 draw.line()
+    //                     .start(pt2(x, y))
+    //                     .end(pt2(
+    //                         x + face_flow.x * flow_scale,
+    //                         y + face_flow.y * flow_scale,
+    //                     ))
+    //                     .color(RED)
+    //                     .stroke_weight(4.0);
+    //             }
+    //         }
+    //     }
 }
 
 fn exit(_app: &App, model: Model) {

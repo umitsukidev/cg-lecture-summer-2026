@@ -4,6 +4,7 @@ pub trait MatExt {
     fn to_rgba_image(&self) -> opencv::Result<nannou::image::RgbaImage>;
 }
 
+#[allow(dead_code)]
 impl MatExt for opencv::core::Mat {
     fn to_rgba_image(&self) -> opencv::Result<nannou::image::RgbaImage> {
         let mut rgba_mat = opencv::core::Mat::default();

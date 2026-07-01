@@ -5,6 +5,7 @@ pub struct OpticalFlow {
     prev_gray: Option<core::Mat>,
 }
 
+#[allow(dead_code)]
 impl OpticalFlow {
     pub fn new() -> Self {
         Self { prev_gray: None }
@@ -32,19 +33,15 @@ impl OpticalFlow {
         Ok(flow)
     }
 
-    pub fn get_average_flow_in_region(
-        flow: &core::Mat,
-        xy: Vec2,
-        wh: Vec2,
-    ) -> opencv::Result<Vec2> {
+    pub fn get_average_flow_in_region(flow: &core::Mat, rect: Rect) -> opencv::Result<Vec2> {
         let mut avg_flow = Vec2::ZERO;
         let img_w = flow.cols();
         let img_h = flow.rows();
 
-        let x = (xy.x as i32).max(0).min(img_w);
-        let y = (xy.y as i32).max(0).min(img_h);
-        let w = (wh.x as i32).max(0).min(img_w - x);
-        let h = (wh.y as i32).max(0).min(img_h - y);
+        let x = (rect.top_left().x as i32).max(0).min(img_w);
+        let y = (rect.top_left().y as i32).max(0).min(img_h);
+        let w = (rect.w() as i32).max(0).min(img_w - x);
+        let h = (rect.h() as i32).max(0).min(img_h - y);
 
         if w > 0 && h > 0 {
             let region = core::Rect::new(x, y, w, h);
@@ -62,8 +59,7 @@ impl OpticalFlow {
     pub fn get_average_flow(flow: &core::Mat) -> opencv::Result<Vec2> {
         Self::get_average_flow_in_region(
             flow,
-            vec2(0.0, 0.0),
-            vec2(flow.cols() as f32, flow.rows() as f32),
+            Rect::from_xy_wh(vec2(0.0, 0.0), vec2(flow.cols() as f32, flow.rows() as f32)),
         )
     }
 
