@@ -25,7 +25,7 @@ struct Model {
     spheres: Vec<Sphere>,
 }
 
-static RAY_COMPUTE_LIMIT: u64 = 1;
+static RAY_COMPUTE_LIMIT: u64 = 1000000;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -107,8 +107,8 @@ fn render(
     spheres: &Vec<Sphere>,
     environment: &Material,
 ) -> Rgba<u8> {
-    let view = camera.ray(window_rect, UVec2::new(x, y), 0.5, 0.5);
-    if let Some(hit) = find_nearest_intersection(spheres, &view, 0.0001, 10000.0) {
+    let view = camera.ray(window_rect, UVec2::new(x, y), random_f32(), random_f32());
+    if let Some(hit) = find_nearest_intersection(spheres, &view, 0.001, f32::MAX) {
         // hit.material.to_color()
         hit.normal.to_color()
     } else {
