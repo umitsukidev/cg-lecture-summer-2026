@@ -19,14 +19,6 @@ struct Model {
     camera: Camera,
     environment: Material,
     sphere: Sphere,
-    colors: Colors,
-}
-
-#[allow(dead_code)]
-struct Colors {
-    white: Material,
-    red: Material,
-    green: Material,
 }
 
 fn main() {
@@ -41,14 +33,7 @@ fn model(app: &App) -> Model {
 
     let image_buffer = RgbaImage::new(width, height);
 
-    // #region create scene
-    let camera = Camera::new(pt3(0.0, -10.0, 2.0), pt3(0.0, 0.0, 0.0), 55.0);
-    let environment = Material::new(Some(vec3(0.6, 0.7, 0.8)), None, None);
-
-    let white = Material::new(None, Some(vec3(0.6, 0.6, 0.2)), Some(MaterialType::DIFFUSE));
-    let red = Material::new(None, Some(vec3(0.8, 0.2, 0.2)), Some(MaterialType::DIFFUSE));
-    let green = Material::new(None, Some(vec3(0.2, 0.8, 0.2)), Some(MaterialType::DIFFUSE));
-    // #endregion
+    let (camera, environment, sphere) = create_scene();
 
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer.clone());
     let image = Image::from_dynamic(
@@ -63,12 +48,7 @@ fn model(app: &App) -> Model {
         image_buffer,
         camera,
         environment,
-        sphere: Sphere {
-            position: pt3(0.0, 0.0, 0.0),
-            radius: 2.0,
-            material: red.clone(),
-        },
-        colors: Colors { white, red, green },
+        sphere,
     }
 }
 
@@ -120,8 +100,25 @@ fn render(
 ) -> Rgba<u8> {
     let view = camera.ray(window_rect, UVec2::new(x, y), 0.5, 0.5);
     if let Some(hit) = sphere.intersect(view, 0.0001, 10000.0) {
-        hit.material.color().to_color()
+        hit.material.to_color()
     } else {
         environment.emission.unwrap().to_color()
     }
+}
+
+fn create_scene() -> (Camera, Material, Sphere) {
+    let camera = Camera::new(pt3(0.0, -10.0, 2.0), pt3(0.0, 0.0, 0.0), 55.0);
+    let environment = Material::new(Some(vec3(0.6, 0.7, 0.8)), None, None);
+
+    let white = Material::new(None, Some(vec3(0.6, 0.6, 0.2)), Some(MaterialType::DIFFUSE));
+    let red = Material::new(None, Some(vec3(0.8, 0.2, 0.2)), Some(MaterialType::DIFFUSE));
+    let green = Material::new(None, Some(vec3(0.2, 0.8, 0.2)), Some(MaterialType::DIFFUSE));
+
+    let sphere = Sphere {
+        position: pt3(0.0, 2.0, 0.0),
+        radius: 2.0,
+        material: red.clone(),
+    };
+
+    (camera, environment, sphere)
 }

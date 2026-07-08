@@ -1,4 +1,6 @@
-use nannou::glam::Vec3;
+use nannou::{glam::Vec3, image::Rgba};
+
+use crate::nannou_utils::Point3Ext;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -34,13 +36,13 @@ impl Material {
         }
     }
 
-    pub fn color(&self) -> Vec3 {
+    pub fn to_color(&self) -> Rgba<u8> {
         if let Some(emission) = self.emission {
-            return emission;
+            return emission.to_color();
         }
         if let Some(reflection) = self.reflection {
-            return reflection;
+            return reflection.to_color();
         }
-        Vec3::ZERO
+        Vec3::ZERO.to_color()
     }
 }
