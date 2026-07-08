@@ -4,6 +4,7 @@ BGRA
 bytemuck
 DYLD
 farneback
+flen
 frontalface
 grakeice
 haarcascade

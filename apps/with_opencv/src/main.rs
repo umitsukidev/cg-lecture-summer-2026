@@ -47,7 +47,7 @@ fn model(app: &App) -> Model {
 
     let running_capture = Arc::clone(&running);
     let capture_handle = thread::spawn(move || {
-        let mut cam = videoio::VideoCapture::new(0, videoio::CAP_AVFOUNDATION)
+        let mut cam = videoio::VideoCapture::new(1, videoio::CAP_AVFOUNDATION)
             .expect("Unable to open camera with AVFoundation");
 
         let opened =

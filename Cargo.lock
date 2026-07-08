@@ -4553,6 +4553,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ray_tracing"
+version = "0.1.0"
+dependencies = [
+ "nannou",
+ "rayon",
+]
+
+[[package]]
 name = "rayon"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
