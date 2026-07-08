@@ -27,8 +27,8 @@ impl Sphere {
         -1.0
     }
 
-    pub fn intersect(&self, ray: Ray, t_min: f32, t_max: f32) -> Option<Hit> {
-        let t = self.distance(&ray);
+    pub fn intersect(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Hit> {
+        let t = self.distance(ray);
         if t_min < t && t < t_max {
             let position = ray.origin + (ray.direction * t);
             Some(Hit {

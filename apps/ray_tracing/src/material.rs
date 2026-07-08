@@ -3,13 +3,13 @@ use nannou::{glam::Vec3, image::Rgba};
 use crate::nannou_utils::Point3Ext;
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum MaterialType {
     DIFFUSE,
     SPECULAR,
 }
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Material {
     // 色
     pub emission: Option<Vec3>,
