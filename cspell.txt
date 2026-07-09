@@ -24,6 +24,7 @@ Rainer
 rustflags
 skytree
 STEELBLUE
+tangentspace
 thresholding
 Unorm
 videoio
