@@ -79,9 +79,9 @@ pub fn render(
 // }
 
 pub fn trace(environment: &Material, spheres: &Vec<Sphere>, ray: Ray, depth: u32) -> Vec3 {
-    // if 10 < depth {
-    //     return vec3(0.0, 0.0, 0.0);
-    // }
+    if 10 < depth {
+        return vec3(0.0, 0.0, 0.0);
+    }
 
     let mut ray = ray;
 
