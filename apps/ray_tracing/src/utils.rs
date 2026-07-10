@@ -36,11 +36,11 @@ pub fn render(
     spheres: &Vec<Sphere>,
     environment: &Material,
     count: &u64,
-    pixel: Vec3,
+    pixel: &mut Vec3,
 ) -> Rgba<u8> {
     let view = camera.ray(window_rect, UVec2::new(x, y), random_f32(), random_f32());
-    let pixel = pixel + trace(environment, spheres, view, 0);
-    let final_color = pixel / (*count as f32 + 1.0);
+    *pixel += trace(environment, spheres, view, 0);
+    let final_color = *pixel / (*count as f32 + 1.0);
     final_color.to_color()
 }
 
@@ -134,9 +134,9 @@ pub fn create_scene() -> (Camera, Material, Vec<Sphere>) {
 }
 
 pub fn trace(environment: &Material, spheres: &Vec<Sphere>, ray: Ray, depth: u32) -> Vec3 {
-    if 10 > depth {
-        return vec3(0.0, 0.0, 0.0);
-    }
+    // if 10 < depth {
+    //     return vec3(0.0, 0.0, 0.0);
+    // }
 
     let mut ray = ray;
 

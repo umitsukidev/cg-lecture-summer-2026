@@ -18,7 +18,7 @@ use rayon::prelude::*;
 struct Model {
     texture: Handle<Image>,
     image_buffer: RgbaImage,
-    accumulated_radiance: Vec<Vec<Vec3>>,
+    accumulated_radiance: Vec<Vec3>,
     camera: Camera,
     environment: Material,
     spheres: Vec<Sphere>,
@@ -48,7 +48,7 @@ fn model(app: &App) -> Model {
     );
     let texture = app.asset_server().add(image);
 
-    let accumulated_radiance = vec![vec![vec3(0.0, 0.0, 0.0); width as usize]; height as usize];
+    let accumulated_radiance = vec![vec3(0.0, 0.0, 0.0); (width * height) as usize];
 
     Model {
         texture,
@@ -78,8 +78,9 @@ fn update(app: &App, model: &mut Model) {
         .as_flat_samples_mut()
         .samples
         .par_chunks_mut(4)
+        .zip(&mut model.accumulated_radiance)
         .enumerate()
-        .for_each(|(index, chunk)| {
+        .for_each(|(index, (chunk, radiance))| {
             let x = (index as u32) % width;
             let y = (index as u32) / width;
 
@@ -91,7 +92,7 @@ fn update(app: &App, model: &mut Model) {
                 spheres,
                 environment,
                 &count,
-                model.accumulated_radiance[y as usize][x as usize],
+                radiance,
             );
 
             chunk[0] = pixel[0];
