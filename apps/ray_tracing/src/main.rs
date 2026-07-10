@@ -3,14 +3,12 @@ mod hit;
 mod material;
 mod nannou_utils;
 mod ray;
+mod scene;
 mod sphere;
 mod utils;
 
 use crate::{
-    camera::Camera,
-    material::Material,
-    sphere::Sphere,
-    utils::{create_scene, render},
+    camera::Camera, material::Material, scene::create_scene, sphere::Sphere, utils::render,
 };
 use nannou::{image::RgbaImage, prelude::*};
 use rayon::prelude::*;
