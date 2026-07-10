@@ -1,16 +1,11 @@
 use crate::{
-    camera::Camera,
-    hit::Hit,
-    material::{Material, MaterialType},
-    nannou_utils::Point3Ext,
-    ray::Ray,
-    sphere::Sphere,
+    camera::Camera, hit::Hit, material::Material, nannou_utils::Point3Ext, ray::Ray, sphere::Sphere,
 };
 use nannou::{image::Rgba, prelude::*};
 use rayon::prelude::*;
 
 pub fn find_nearest_intersection(
-    spheres: &Vec<Sphere>,
+    spheres: &[Sphere],
     ray: &Ray,
     t_min: f32,
     t_max: f32,
@@ -33,87 +28,51 @@ pub fn render(
     x: u32,
     y: u32,
     camera: &Camera,
-    spheres: &Vec<Sphere>,
+    spheres: &[Sphere],
     environment: &Material,
-    count: &u64,
+    count: u64,
     pixel: &mut Vec3,
 ) -> Rgba<u8> {
     let view = camera.ray(window_rect, UVec2::new(x, y), random_f32(), random_f32());
     *pixel += trace(environment, spheres, view, 0);
-    let final_color = *pixel / (*count as f32 + 1.0);
+    let final_color = *pixel / (count as f32 + 1.0);
     final_color.to_color()
 }
 
-// pub fn render(
-//     window_rect: Rect,
-//     x: u32,
-//     y: u32,
-//     camera: &Camera,
-//     spheres: &Vec<Sphere>,
-//     environment: &Material,
-// ) -> Rgba<u8> {
-//     let view = camera.ray(window_rect, UVec2::new(x, y), random_f32(), random_f32());
-//     if let Some(hit) = find_nearest_intersection(spheres, &view, 0.001, f32::MAX) {
-//         // hit.material.to_color()
-//         hit.normal.to_color()
-//     } else {
-//         environment.emission.unwrap().to_color()
-//     }
-// }
-
-// fn create_scene() -> (Camera, Material, Sphere) {
-//     let camera = Camera::new(pt3(0.0, -20.0, 2.0), pt3(0.0, 0.0, 0.0), 55.0);
-//     let environment = Material::new(Some(vec3(0.6, 0.7, 0.8)), None, None);
-//
-//     let white = Material::new(None, Some(vec3(0.6, 0.6, 0.2)), Some(MaterialType::DIFFUSE));
-//     let red = Material::new(None, Some(vec3(0.8, 0.2, 0.2)), Some(MaterialType::DIFFUSE));
-//     let green = Material::new(None, Some(vec3(0.2, 0.8, 0.2)), Some(MaterialType::DIFFUSE));
-//
-//     let sphere = Sphere {
-//         position: pt3(0.0, 10.0, 0.0),
-//         radius: 2.0,
-//         material: red.clone(),
-//     };
-//
-//     (camera, environment, sphere)
-// }
-
-pub fn trace(environment: &Material, spheres: &Vec<Sphere>, ray: Ray, depth: u32) -> Vec3 {
+pub fn trace(environment: &Material, spheres: &[Sphere], ray: Ray, depth: u32) -> Vec3 {
     if 10 < depth {
         return vec3(0.0, 0.0, 0.0);
     }
 
     let mut ray = ray;
-
     let hit = find_nearest_intersection(spheres, &ray, 0.001, f32::MAX);
-
     let mut result = vec3(0.0, 0.0, 0.0);
 
     if let Some(hit) = hit {
-        if let Some(emission) = hit.material.emission {
-            result += emission;
-        }
-
-        if let Some(reflection) = hit.material.reflection {
-            let (t, b) = tangentspace_basis(&hit.normal);
-
-            match hit.material.material_type {
-                MaterialType::DIFFUSE => {
-                    let dir = sample_hemisphere_cosine(random_f32(), random_f32());
-                    ray.origin = hit.position;
-                    ray.direction = dir.x * t + dir.y * b + dir.z * hit.normal;
-                }
-                MaterialType::SPECULAR => {
-                    let direction = ray.direction;
-                    let normal = hit.normal;
-                    ray.origin = hit.position;
-                    ray.direction = direction - 2.0 * (direction.dot(normal)) * normal;
-                }
+        match hit.material {
+            Material::Diffuse { reflection } => {
+                let (t, b) = tangentspace_basis(&hit.normal);
+                let dir = sample_hemisphere_cosine(random_f32(), random_f32());
+                ray.origin = hit.position;
+                ray.direction = dir.x * t + dir.y * b + dir.z * hit.normal;
+                result += trace(environment, spheres, ray, depth + 1) * reflection;
             }
-            result += trace(environment, spheres, ray, depth + 1) * reflection;
+            Material::Specular { reflection } => {
+                let direction = ray.direction;
+                let normal = hit.normal;
+                ray.origin = hit.position;
+                ray.direction = direction - 2.0 * (direction.dot(normal)) * normal;
+                result += trace(environment, spheres, ray, depth + 1) * reflection;
+            }
+            Material::Emissive { emission } => {
+                result += emission;
+            }
         }
     } else {
-        return environment.emission.unwrap_or(vec3(0.0, 0.0, 0.0));
+        match environment {
+            Material::Emissive { emission } => return *emission,
+            _ => return vec3(0.0, 0.0, 0.0),
+        }
     }
     result
 }

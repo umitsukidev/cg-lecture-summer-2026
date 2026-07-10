@@ -89,7 +89,7 @@ fn update(app: &App, model: &mut Model) {
                 camera,
                 spheres,
                 environment,
-                &count,
+                count,
                 radiance,
             );
 
