@@ -18,6 +18,7 @@ use rayon::prelude::*;
 struct Model {
     texture: Handle<Image>,
     image_buffer: RgbaImage,
+    accumulated_radiance: Vec<Vec<Vec3>>,
     camera: Camera,
     environment: Material,
     spheres: Vec<Sphere>,
@@ -47,9 +48,12 @@ fn model(app: &App) -> Model {
     );
     let texture = app.asset_server().add(image);
 
+    let accumulated_radiance = vec![vec![vec3(0.0, 0.0, 0.0); width as usize]; height as usize];
+
     Model {
         texture,
         image_buffer,
+        accumulated_radiance,
         camera,
         environment,
         spheres,
@@ -57,7 +61,8 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model) {
-    if app.elapsed_frames() > RAY_COMPUTE_LIMIT {
+    let count = app.elapsed_frames();
+    if count > RAY_COMPUTE_LIMIT {
         return;
     }
     let width = model.image_buffer.width();
@@ -78,7 +83,16 @@ fn update(app: &App, model: &mut Model) {
             let x = (index as u32) % width;
             let y = (index as u32) / width;
 
-            let pixel = render(window_rect, x, y, camera, spheres, environment);
+            let pixel = render(
+                window_rect,
+                x,
+                y,
+                camera,
+                spheres,
+                environment,
+                &count,
+                model.accumulated_radiance[y as usize][x as usize],
+            );
 
             chunk[0] = pixel[0];
             chunk[1] = pixel[1];
