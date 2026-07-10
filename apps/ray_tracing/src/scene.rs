@@ -9,7 +9,7 @@ pub fn create_scene() -> (Camera, Material, Vec<Sphere>) {
     let camera = Camera::new(pt3(0.0, -10.0, 2.0), pt3(0.0, 0.0, 2.0), 55.0);
     let environment = Material::new(Some(vec3(0.6, 0.7, 0.8)), None, None);
 
-    let white = Material::new(None, Some(vec3(0.6, 0.6, 0.2)), Some(MaterialType::DIFFUSE));
+    let white = Material::new(None, Some(vec3(0.6, 0.6, 0.6)), Some(MaterialType::DIFFUSE));
     let red = Material::new(None, Some(vec3(0.8, 0.2, 0.2)), Some(MaterialType::DIFFUSE));
     let green = Material::new(None, Some(vec3(0.2, 0.8, 0.2)), Some(MaterialType::DIFFUSE));
     let mirror = Material::new(
