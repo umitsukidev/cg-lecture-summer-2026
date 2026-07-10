@@ -262,8 +262,9 @@ fn update(app: &App, model: &mut Model) {
         ));
     } else if frame_count == SAMPLES {
         window.set_title(&format!(
-            "ray_tracing_gpu [Completed in {:.2?}]",
-            model.start_time.elapsed()
+            "ray_tracing_gpu [Completed in {:.2?} ({} samples)]",
+            model.start_time.elapsed(),
+            SAMPLES
         ));
     }
 
