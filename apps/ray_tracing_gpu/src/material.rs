@@ -5,6 +5,7 @@ pub enum Material {
     Diffuse { reflection: Vec3 },
     Specular { reflection: Vec3 },
     Emissive { emission: Vec3 },
+    Refractive { reflection: Vec3, ior: f32 },
 }
 
 impl Material {
@@ -18,6 +19,10 @@ impl Material {
 
     pub fn emissive(emission: Vec3) -> Self {
         Material::Emissive { emission }
+    }
+
+    pub fn refractive(reflection: Vec3, ior: f32) -> Self {
+        Material::Refractive { reflection, ior }
     }
 
     pub fn to_gpu(&self) -> GpuMaterial {
@@ -45,6 +50,14 @@ impl Material {
                 pad2: 0,
                 color: emission.into(),
                 pad3: 0.0,
+            },
+            Material::Refractive { reflection, ior } => GpuMaterial {
+                material_type: 3,
+                pad0: 0,
+                pad1: 0,
+                pad2: 0,
+                color: reflection.into(),
+                pad3: ior,
             },
         }
     }

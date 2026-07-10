@@ -10,6 +10,7 @@ pub fn create_scene() -> (Camera, Material, Vec<Sphere>) {
     let green = Material::diffuse(vec3(0.2, 0.8, 0.2));
     let mirror = Material::specular(vec3(0.9, 0.6, 0.1));
     let light = Material::emissive(vec3(10.0, 10.0, 10.0));
+    let glass = Material::refractive(vec3(1.0, 0.64, 0.83), 1.7);
 
     let spheres = vec![
         Sphere {
@@ -22,6 +23,11 @@ pub fn create_scene() -> (Camera, Material, Vec<Sphere>) {
             radius: 2.0,
             material: mirror,
         }, // ball right
+        Sphere {
+            position: pt3(1.0, -3.0, -0.5),
+            radius: 1.0,
+            material: glass,
+        }, // ball center
         Sphere {
             position: pt3(0.0, -2.0, 10.0),
             radius: 3.0,

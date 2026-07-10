@@ -4,6 +4,8 @@ AVFOUNDATION
 BGRA
 bytemuck
 DYLD
+etai
+etat
 farneback
 flen
 frontalface

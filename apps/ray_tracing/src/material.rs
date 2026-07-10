@@ -2,10 +2,11 @@ use crate::nannou_utils::Point3Ext;
 use nannou::{glam::Vec3, image::Rgba};
 
 #[allow(dead_code)]
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum Material {
     Diffuse { reflection: Vec3 },
     Specular { reflection: Vec3 },
+    Refractive { reflection: Vec3, ior: f32 },
     Emissive { emission: Vec3 },
 }
 
@@ -23,11 +24,16 @@ impl Material {
         Material::Emissive { emission }
     }
 
-    pub fn to_color(self) -> Rgba<u8> {
-        match self {
+    pub fn refractive(reflection: Vec3, ior: f32) -> Self {
+        Material::Refractive { reflection, ior }
+    }
+
+    pub fn to_color(&self) -> Rgba<u8> {
+        match *self {
             Material::Diffuse { reflection } => reflection.to_color(),
             Material::Specular { reflection } => reflection.to_color(),
             Material::Emissive { emission } => emission.to_color(),
+            Material::Refractive { reflection, .. } => reflection.to_color(),
         }
     }
 }

@@ -42,6 +42,7 @@ struct Hit {
     normal: vec3<f32>,
     material_type: u32,
     material_color: vec3<f32>,
+    material_ior: f32,
 }
 
 // Bindings for Compute Shader
@@ -115,6 +116,7 @@ fn sphere_distance(sphere: Sphere, ray_origin: vec3<f32>, ray_direction: vec3<f3
 fn intersect_sphere(sphere: Sphere, ray_origin: vec3<f32>, ray_direction: vec3<f32>, t_min: f32, t_max: f32) -> Hit {
     var hit: Hit;
     hit.distance = -1.0;
+    hit.material_ior = 0.0;
     
     let t = sphere_distance(sphere, ray_origin, ray_direction);
     if (t_min < t && t < t_max) {
@@ -123,6 +125,7 @@ fn intersect_sphere(sphere: Sphere, ray_origin: vec3<f32>, ray_direction: vec3<f
         hit.normal = normalize(hit.position - sphere.position);
         hit.material_type = sphere.material.material_type;
         hit.material_color = sphere.material.color;
+        hit.material_ior = sphere.material.pad3;
     }
     return hit;
 }
@@ -141,8 +144,10 @@ fn find_nearest_intersection(ray_origin: vec3<f32>, ray_direction: vec3<f32>, t_
     }
     
     if (nearest_hit.distance > 0.0) {
-        if (dot(ray_direction, nearest_hit.normal) > 0.0) {
-            nearest_hit.normal = nearest_hit.normal * -1.0;
+        if (nearest_hit.material_type != 3u) {
+            if (dot(ray_direction, nearest_hit.normal) > 0.0) {
+                nearest_hit.normal = nearest_hit.normal * -1.0;
+            }
         }
     }
     
@@ -160,6 +165,12 @@ fn get_camera_ray(coord: vec2<u32>, size: vec2<f32>, u1: f32, u2: f32) -> Ray {
     ray.origin = camera.position;
     ray.direction = normalize(world_dir);
     return ray;
+}
+
+fn reflectance(cosine: f32, refraction_ratio: f32) -> f32 {
+    var r0 = (1.0 - refraction_ratio) / (1.0 + refraction_ratio);
+    r0 = r0 * r0;
+    return r0 + (1.0 - r0) * pow(1.0 - cosine, 5.0);
 }
 
 fn trace(ray_origin_in: vec3<f32>, ray_direction_in: vec3<f32>, rng_state: ptr<function, vec3<u32>>) -> vec3<f32> {
@@ -188,6 +199,32 @@ fn trace(ray_origin_in: vec3<f32>, ray_direction_in: vec3<f32>, rng_state: ptr<f
             } else if (hit.material_type == 2u) { // Emissive
                 accumulated_light = accumulated_light + throughput * hit.material_color;
                 break;
+            } else if (hit.material_type == 3u) { // Refractive
+                let is_entering = dot(direction, hit.normal) < 0.0;
+                var normal = hit.normal;
+                if (!is_entering) {
+                    normal = hit.normal * -1.0;
+                }
+                var refraction_ratio = 1.0 / hit.material_ior;
+                if (!is_entering) {
+                    refraction_ratio = hit.material_ior;
+                }
+
+                let cos_theta = min(dot(direction * -1.0, normal), 1.0);
+                let sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+
+                let cannot_refract = refraction_ratio * sin_theta > 1.0;
+                var next_direction: vec3<f32>;
+                let r = rng_next_f32(rng_state);
+                if (cannot_refract || reflectance(cos_theta, refraction_ratio) > r) {
+                    next_direction = reflect(direction, normal);
+                } else {
+                    next_direction = refract(direction, normal, refraction_ratio);
+                }
+
+                origin = hit.position;
+                direction = next_direction;
+                throughput = throughput * hit.material_color;
             }
         } else {
             // Environment illumination

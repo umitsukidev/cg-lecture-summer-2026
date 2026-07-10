@@ -3,14 +3,14 @@ use nannou::geom::Point3;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy)]
-pub struct Sphere {
+pub struct Sphere<'a> {
     pub position: Point3,
     pub radius: f32,
-    pub material: Material,
+    pub material: &'a Material,
 }
 
 #[allow(dead_code)]
-impl Sphere {
+impl<'a> Sphere<'a> {
     pub fn distance(&self, ray: Ray) -> f32 {
         let position = ray.origin - self.position;
         let b = ray.direction.dot(position);
@@ -27,7 +27,7 @@ impl Sphere {
         -1.0
     }
 
-    pub fn intersect(&self, ray: Ray, t_min: f32, t_max: f32) -> Option<Hit> {
+    pub fn intersect(&self, ray: Ray, t_min: f32, t_max: f32) -> Option<Hit<'a>> {
         let t = self.distance(ray);
         if t_min < t && t < t_max {
             let position = ray.origin + (ray.direction * t);
@@ -35,7 +35,7 @@ impl Sphere {
                 distance: t,
                 position,
                 normal: (position - self.position).normalize(),
-                material: self.material.clone(),
+                material: self.material,
             })
         } else {
             None

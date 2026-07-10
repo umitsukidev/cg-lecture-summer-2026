@@ -20,7 +20,7 @@ struct Model {
     accumulated_radiance: Vec<Vec3>,
     camera: Camera,
     environment: Material,
-    spheres: Vec<Sphere>,
+    spheres: Vec<Sphere<'static>>,
     start_time: std::time::Instant,
 }
 
@@ -104,7 +104,7 @@ fn update(app: &App, model: &mut Model) {
                 y,
                 &model.camera,
                 &model.spheres,
-                model.environment,
+                &model.environment,
                 count,
                 radiance,
             );

@@ -4,20 +4,25 @@ use crate::{
 use nannou::{image::Rgba, prelude::*};
 use rayon::prelude::*;
 
-pub fn find_nearest_intersection(
-    spheres: &[Sphere],
+pub fn find_nearest_intersection<'a>(
+    spheres: &[Sphere<'a>],
     ray: Ray,
     t_min: f32,
     t_max: f32,
-) -> Option<Hit> {
+) -> Option<Hit<'a>> {
     let mut hit = spheres
         .par_iter()
         .filter_map(|sphere| sphere.intersect(ray, t_min, t_max))
         .min_by(|a, b| a.distance.total_cmp(&b.distance));
 
     if let Some(hit) = &mut hit {
-        if ray.direction.dot(hit.normal) > 0.0 {
-            hit.normal *= -1.0;
+        match hit.material {
+            Material::Refractive { .. } => {}
+            _ => {
+                if ray.direction.dot(hit.normal) > 0.0 {
+                    hit.normal *= -1.0;
+                }
+            }
         }
     }
     hit
@@ -28,8 +33,8 @@ pub fn render(
     x: u32,
     y: u32,
     camera: &Camera,
-    spheres: &[Sphere],
-    environment: Material,
+    spheres: &[Sphere<'_>],
+    environment: &Material,
     count: u64,
     pixel: &mut Vec3,
 ) -> Rgba<u8> {
@@ -39,7 +44,7 @@ pub fn render(
     final_color.to_color()
 }
 
-pub fn trace(environment: Material, spheres: &[Sphere], ray: Ray, depth: u32) -> Vec3 {
+pub fn trace(environment: &Material, spheres: &[Sphere<'_>], ray: Ray, depth: u32) -> Vec3 {
     if 10 < depth {
         return vec3(0.0, 0.0, 0.0);
     }
@@ -55,22 +60,42 @@ pub fn trace(environment: Material, spheres: &[Sphere], ray: Ray, depth: u32) ->
                 let dir = sample_hemisphere_cosine(random_f32(), random_f32());
                 ray.origin = hit.position;
                 ray.direction = dir.x * t + dir.y * b + dir.z * hit.normal;
-                result += trace(environment, spheres, ray, depth + 1) * reflection;
+                result += trace(environment, spheres, ray, depth + 1) * *reflection;
             }
             Material::Specular { reflection } => {
                 let direction = ray.direction;
                 let normal = hit.normal;
                 ray.origin = hit.position;
                 ray.direction = direction - 2.0 * (direction.dot(normal)) * normal;
-                result += trace(environment, spheres, ray, depth + 1) * reflection;
+                result += trace(environment, spheres, ray, depth + 1) * *reflection;
             }
             Material::Emissive { emission } => {
-                result += emission;
+                result += *emission;
+            }
+            Material::Refractive { reflection, ior } => {
+                let is_entering = ray.direction.dot(hit.normal) < 0.0;
+                let normal = if is_entering { hit.normal } else { -hit.normal };
+                let refraction_ratio = if is_entering { 1.0 / ior } else { *ior };
+
+                let cos_theta = (-ray.direction.dot(normal)).min(1.0);
+                let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+
+                let cannot_refract = refraction_ratio * sin_theta > 1.0;
+                let direction =
+                    if cannot_refract || reflectance(cos_theta, refraction_ratio) > random_f32() {
+                        ray.direction - 2.0 * ray.direction.dot(normal) * normal
+                    } else {
+                        refract(ray.direction, normal, refraction_ratio)
+                    };
+
+                ray.origin = hit.position;
+                ray.direction = direction;
+                result += trace(environment, spheres, ray, depth + 1) * *reflection;
             }
         }
     } else {
         match environment {
-            Material::Emissive { emission } => return emission,
+            Material::Emissive { emission } => return *emission,
             _ => return vec3(0.0, 0.0, 0.0),
         }
     }
@@ -90,4 +115,17 @@ pub fn sample_hemisphere_cosine(u1: f32, u2: f32) -> Vec3 {
     let r = u1.sqrt();
     let theta = u2 * 2.0 * PI;
     vec3(r * theta.cos(), r * theta.sin(), (1.0 - u1).sqrt())
+}
+
+fn reflectance(cosine: f32, refraction_ratio: f32) -> f32 {
+    let mut r0 = (1.0 - refraction_ratio) / (1.0 + refraction_ratio);
+    r0 = r0 * r0;
+    r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
+}
+
+fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
+    let cos_theta = (-uv.dot(n)).min(1.0);
+    let r_out_perp = etai_over_etat * (uv + cos_theta * n);
+    let r_out_parallel = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * n;
+    r_out_perp + r_out_parallel
 }
