@@ -27,8 +27,8 @@ struct ConfigUniform {
     environment: Material,
     frame_count: u32,
     sphere_count: u32,
-    pad0: u32,
-    pad1: u32,
+    width: u32,
+    height: u32,
 }
 
 struct Ray {
@@ -207,7 +207,7 @@ fn trace(ray_origin_in: vec3<f32>, ray_direction_in: vec3<f32>, rng_state: ptr<f
 
 @compute @workgroup_size(16, 16)
 fn cs_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let size = vec2<u32>(512u, 512u);
+    let size = vec2<u32>(config.width, config.height);
     if (global_id.x >= size.x || global_id.y >= size.y) {
         return;
     }

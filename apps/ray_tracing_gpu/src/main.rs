@@ -13,21 +13,19 @@ use nannou::prelude::*;
 use nannou::wgpu::util::DeviceExt;
 use std::sync::Arc;
 
+static WIDTH: u32 = 1024;
+static HEIGHT: u32 = 1024;
+
 #[derive(Clone)]
 struct Model {
     _window_id: Entity,
-    // wgpu assets (wrapped in Arc for Clone derivation)
     config_buffer: Arc<wgpu::Buffer>,
-
     compute_pipeline: Arc<wgpu::ComputePipeline>,
     compute_bind_group: Arc<wgpu::BindGroup>,
-
     pipeline_layout: Arc<wgpu::PipelineLayout>,
     shader: Arc<wgpu::ShaderModule>,
     render_pipeline: Arc<std::sync::OnceLock<wgpu::RenderPipeline>>,
     render_bind_group: Arc<wgpu::BindGroup>,
-
-    // Scene data
     _camera: Camera,
     _spheres: Vec<Sphere>,
     _environment: Material,
@@ -40,8 +38,8 @@ struct GpuConfig {
     environment: GpuMaterial,
     frame_count: u32,
     sphere_count: u32,
-    pad0: u32,
-    pad1: u32,
+    width: u32,
+    height: u32,
 }
 
 fn main() {
@@ -49,7 +47,7 @@ fn main() {
 }
 
 fn model(app: &App) -> Model {
-    let window_id = app.new_window::<Model>().size(512, 512).build();
+    let window_id = app.new_window::<Model>().size(WIDTH, HEIGHT).build();
 
     let window = app.window(window_id);
     let device = window.device();
@@ -58,7 +56,7 @@ fn model(app: &App) -> Model {
 
     // 1. Create Output Texture
     let texture = wgpu::TextureBuilder::new()
-        .size([512, 512])
+        .size([WIDTH, HEIGHT])
         .format(wgpu::TextureFormat::Rgba8Unorm)
         .usage(wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::STORAGE_BINDING)
         .sample_count(1)
@@ -84,8 +82,8 @@ fn model(app: &App) -> Model {
         environment: environment.to_gpu(),
         frame_count: 0,
         sphere_count: spheres.len() as u32,
-        pad0: 0,
-        pad1: 0,
+        width: WIDTH,
+        height: HEIGHT,
     };
     let config_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Config Uniform Buffer"),
@@ -93,7 +91,7 @@ fn model(app: &App) -> Model {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
     });
 
-    let accum_size = 512 * 512 * std::mem::size_of::<[f32; 4]>();
+    let accum_size = (WIDTH * HEIGHT) as usize * std::mem::size_of::<[f32; 4]>();
     let accumulation_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Accumulation Storage Buffer"),
         size: accum_size as u64,
@@ -256,8 +254,8 @@ fn update(app: &App, model: &mut Model) {
         environment: model._environment.to_gpu(),
         frame_count: model.frame_count,
         sphere_count: model._spheres.len() as u32,
-        pad0: 0,
-        pad1: 0,
+        width: WIDTH,
+        height: HEIGHT,
     };
     queue.write_buffer(&model.config_buffer, 0, bytemuck::bytes_of(&config));
 }
@@ -274,8 +272,10 @@ fn render(_app: &RenderApp, model: &Model, frame: Frame) {
         });
         compute_pass.set_pipeline(&model.compute_pipeline);
         compute_pass.set_bind_group(0, &*model.compute_bind_group, &[]);
-        // Grid size: 512x512. Workgroup size: 16x16.
-        compute_pass.dispatch_workgroups(32, 32, 1);
+        // Grid size: WIDTH x HEIGHT. Workgroup size: 16x16.
+        let dispatch_x = (WIDTH + 15) / 16;
+        let dispatch_y = (HEIGHT + 15) / 16;
+        compute_pass.dispatch_workgroups(dispatch_x, dispatch_y, 1);
     }
 
     // 2. Render Fullscreen Quad to frame view
