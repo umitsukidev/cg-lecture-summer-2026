@@ -41,7 +41,8 @@ fn model(app: &App) -> Model {
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer.clone());
     let image = Image::from_dynamic(
         dynamic_image,
-        true,
+        // trueにするとガンマ補正されなくなり、教材と一致する
+        false,
         bevy_asset::RenderAssetUsages::default(),
     );
     let texture = app.asset_server().add(image);
