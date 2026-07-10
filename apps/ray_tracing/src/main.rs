@@ -31,7 +31,7 @@ fn main() {
 }
 
 fn model(app: &App) -> Model {
-    let _window = app.new_window().size(512, 512).view(view).build();
+    let _window = app.new_window().size(1024, 1024).view(view).build();
 
     let width = app.window_rect().w() as u32;
     let height = app.window_rect().h() as u32;
@@ -109,5 +109,6 @@ fn update(app: &App, model: &mut Model) {
 
 fn view(app: &App, model: &Model) {
     let draw = app.draw();
-    draw.rect().w_h(512.0, 512.0).texture(&model.texture);
+    let window_rect = app.window_rect();
+    draw.rect().wh(window_rect.wh()).texture(&model.texture);
 }
