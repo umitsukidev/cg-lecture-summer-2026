@@ -1,5 +1,5 @@
+use crate::material::{GpuMaterial, Material};
 use nannou::geom::Point3;
-use crate::material::{Material, GpuMaterial};
 
 #[derive(Clone, Copy)]
 pub struct Sphere {

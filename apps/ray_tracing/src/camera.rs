@@ -1,6 +1,5 @@
-use nannou::prelude::*;
-
 use crate::ray::Ray;
+use nannou::prelude::*;
 
 #[allow(dead_code)]
 #[derive(Clone)]

@@ -1,6 +1,5 @@
-use nannou::geom::Point3;
-
 use crate::{hit::Hit, material::Material, ray::Ray};
+use nannou::geom::Point3;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy)]

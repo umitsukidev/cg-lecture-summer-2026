@@ -1,6 +1,5 @@
-use nannou::{glam::Vec3, image::Rgba};
-
 use crate::nannou_utils::Point3Ext;
+use nannou::{glam::Vec3, image::Rgba};
 
 #[allow(dead_code)]
 #[derive(Clone, Copy)]

@@ -1,6 +1,5 @@
-use nannou::{geom::Point3, glam::Vec3};
-
 use crate::material::Material;
+use nannou::{geom::Point3, glam::Vec3};
 
 #[allow(dead_code)]
 #[derive(Clone)]

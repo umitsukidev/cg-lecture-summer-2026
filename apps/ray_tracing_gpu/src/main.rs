@@ -9,8 +9,7 @@ use crate::{
     scene::create_scene,
     sphere::{GpuSphere, Sphere},
 };
-use nannou::prelude::*;
-use nannou::wgpu::util::DeviceExt;
+use nannou::{prelude::*, wgpu::util::DeviceExt};
 use std::sync::Arc;
 
 static WIDTH: u32 = 1024;

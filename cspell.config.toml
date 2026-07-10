@@ -1,4 +1,4 @@
-"$schema" = "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json"
+#:schema https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json
 
 language = "en,ja"
 ignorePaths = ["Cargo.lock", "target"]
