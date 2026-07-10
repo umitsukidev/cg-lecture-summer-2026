@@ -22,7 +22,7 @@ struct Model {
     spheres: Vec<Sphere>,
 }
 
-static RAY_COMPUTE_LIMIT: u64 = 1000000;
+static RAY_COMPUTE_LIMIT: u64 = u64::MAX;
 
 fn main() {
     nannou::app(model).update(update).run();
