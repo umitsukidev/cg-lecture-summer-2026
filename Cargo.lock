@@ -4561,6 +4561,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ray_tracing_gpu"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "nannou",
+ "rayon",
+]
+
+[[package]]
 name = "rayon"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
