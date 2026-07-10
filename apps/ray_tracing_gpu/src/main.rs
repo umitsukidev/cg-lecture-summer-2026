@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 static WIDTH: u32 = 1024;
 static HEIGHT: u32 = 1024;
+static SAMPLES: u32 = 512;
 
 #[derive(Clone)]
 struct Model {
@@ -30,6 +31,7 @@ struct Model {
     _spheres: Vec<Sphere>,
     _environment: Material,
     frame_count: u32,
+    start_time: std::time::Instant,
 }
 
 #[repr(C)]
@@ -229,6 +231,8 @@ fn model(app: &App) -> Model {
         .sampler(&sampler)
         .build(device, &render_bind_group_layout);
 
+    let start_time = std::time::Instant::now();
+
     Model {
         _window_id: window_id,
         config_buffer: Arc::new(config_buffer),
@@ -242,11 +246,21 @@ fn model(app: &App) -> Model {
         _spheres: spheres,
         _environment: environment,
         frame_count: 0,
+        start_time,
     }
 }
 
 fn update(app: &App, model: &mut Model) {
-    model.frame_count = app.elapsed_frames() as u32;
+    let frame_count = app.elapsed_frames() as u32;
+    model.frame_count = frame_count;
+
+    if frame_count == SAMPLES {
+        println!("GPU rendering of {} samples completed in {:?}", SAMPLES, model.start_time.elapsed());
+    }
+
+    if frame_count >= SAMPLES {
+        return;
+    }
 
     let window = app.window(model._window_id);
     let queue = window.queue();
@@ -265,7 +279,7 @@ fn render(_app: &RenderApp, model: &Model, frame: Frame) {
     let mut encoder = frame.command_encoder();
 
     // 1. Dispatch Compute Shader
-    {
+    if model.frame_count < SAMPLES {
         let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("Ray Tracing Compute Pass"),
             ..Default::default()

@@ -20,9 +20,10 @@ struct Model {
     camera: Camera,
     environment: Material,
     spheres: Vec<Sphere>,
+    start_time: std::time::Instant,
 }
 
-static RAY_COMPUTE_LIMIT: u64 = u64::MAX;
+static SAMPLES: u64 = 512;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -48,6 +49,7 @@ fn model(app: &App) -> Model {
     let texture = app.asset_server().add(image);
 
     let accumulated_radiance = vec![vec3(0.0, 0.0, 0.0); (width * height) as usize];
+    let start_time = std::time::Instant::now();
 
     Model {
         texture,
@@ -56,12 +58,16 @@ fn model(app: &App) -> Model {
         camera,
         environment,
         spheres,
+        start_time,
     }
 }
 
 fn update(app: &App, model: &mut Model) {
     let count = app.elapsed_frames();
-    if count > RAY_COMPUTE_LIMIT {
+    if count == SAMPLES {
+        println!("CPU rendering of {} samples completed in {:?}", SAMPLES, model.start_time.elapsed());
+    }
+    if count >= SAMPLES {
         return;
     }
     let width = model.image_buffer.width();
