@@ -2,7 +2,6 @@ use crate::{
     camera::Camera, hit::Hit, material::Material, nannou_utils::Point3Ext, ray::Ray, sphere::Sphere,
 };
 use nannou::{image::Rgba, prelude::*};
-use rayon::prelude::*;
 
 pub fn find_nearest_intersection<'a>(
     spheres: &[Sphere<'a>],
@@ -11,7 +10,7 @@ pub fn find_nearest_intersection<'a>(
     t_max: f32,
 ) -> Option<Hit<'a>> {
     let mut hit = spheres
-        .par_iter()
+        .iter()
         .filter_map(|sphere| sphere.intersect(ray, t_min, t_max))
         .min_by(|a, b| a.distance.total_cmp(&b.distance));
 
