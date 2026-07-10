@@ -66,9 +66,6 @@ fn update(app: &App, model: &mut Model) {
     let width = model.image_buffer.width();
     let _height = model.image_buffer.height();
 
-    let camera = &model.camera;
-    let spheres = &model.spheres;
-    let environment = &model.environment;
     let window_rect = app.window_rect();
 
     model
@@ -86,9 +83,9 @@ fn update(app: &App, model: &mut Model) {
                 window_rect,
                 x,
                 y,
-                camera,
-                spheres,
-                environment,
+                &model.camera,
+                &model.spheres,
+                model.environment,
                 count,
                 radiance,
             );

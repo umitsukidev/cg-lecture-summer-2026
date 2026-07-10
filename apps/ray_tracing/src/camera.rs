@@ -3,6 +3,7 @@ use nannou::prelude::*;
 use crate::ray::Ray;
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct Camera {
     pub position: Point3,
     pub flen: f32,

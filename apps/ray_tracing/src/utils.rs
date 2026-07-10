@@ -6,7 +6,7 @@ use rayon::prelude::*;
 
 pub fn find_nearest_intersection(
     spheres: &[Sphere],
-    ray: &Ray,
+    ray: Ray,
     t_min: f32,
     t_max: f32,
 ) -> Option<Hit> {
@@ -29,7 +29,7 @@ pub fn render(
     y: u32,
     camera: &Camera,
     spheres: &[Sphere],
-    environment: &Material,
+    environment: Material,
     count: u64,
     pixel: &mut Vec3,
 ) -> Rgba<u8> {
@@ -39,19 +39,19 @@ pub fn render(
     final_color.to_color()
 }
 
-pub fn trace(environment: &Material, spheres: &[Sphere], ray: Ray, depth: u32) -> Vec3 {
+pub fn trace(environment: Material, spheres: &[Sphere], ray: Ray, depth: u32) -> Vec3 {
     if 10 < depth {
         return vec3(0.0, 0.0, 0.0);
     }
 
     let mut ray = ray;
-    let hit = find_nearest_intersection(spheres, &ray, 0.001, f32::MAX);
+    let hit = find_nearest_intersection(spheres, ray, 0.001, f32::MAX);
     let mut result = vec3(0.0, 0.0, 0.0);
 
     if let Some(hit) = hit {
         match hit.material {
             Material::Diffuse { reflection } => {
-                let (t, b) = tangentspace_basis(&hit.normal);
+                let (t, b) = tangentspace_basis(hit.normal);
                 let dir = sample_hemisphere_cosine(random_f32(), random_f32());
                 ray.origin = hit.position;
                 ray.direction = dir.x * t + dir.y * b + dir.z * hit.normal;
@@ -70,14 +70,14 @@ pub fn trace(environment: &Material, spheres: &[Sphere], ray: Ray, depth: u32) -
         }
     } else {
         match environment {
-            Material::Emissive { emission } => return *emission,
+            Material::Emissive { emission } => return emission,
             _ => return vec3(0.0, 0.0, 0.0),
         }
     }
     result
 }
 
-pub fn tangentspace_basis(n: &Vec3) -> (Vec3, Vec3) {
+pub fn tangentspace_basis(n: Vec3) -> (Vec3, Vec3) {
     let sg = if n.z < 0.0 { -1.0 } else { 1.0 };
     let a_factor = -1.0 / (sg + n.z);
     let b_factor = n.x * n.y * a_factor;
