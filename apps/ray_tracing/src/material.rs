@@ -24,8 +24,8 @@ impl Material {
         Material::Emissive { emission }
     }
 
-    pub fn to_color(&self) -> Rgba<u8> {
-        match *self {
+    pub fn to_color(self) -> Rgba<u8> {
+        match self {
             Material::Diffuse { reflection } => reflection.to_color(),
             Material::Specular { reflection } => reflection.to_color(),
             Material::Emissive { emission } => emission.to_color(),
