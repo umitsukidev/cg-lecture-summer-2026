@@ -254,15 +254,23 @@ fn update(app: &App, model: &mut Model) {
     let frame_count = app.elapsed_frames() as u32;
     model.frame_count = frame_count;
 
-    if frame_count == SAMPLES {
-        println!("GPU rendering of {} samples completed in {:?}", SAMPLES, model.start_time.elapsed());
+    let window = app.window(model._window_id);
+    if frame_count < SAMPLES {
+        window.set_title(&format!(
+            "ray_tracing_gpu [{} / {} samples]",
+            frame_count, SAMPLES
+        ));
+    } else if frame_count == SAMPLES {
+        window.set_title(&format!(
+            "ray_tracing_gpu [Completed in {:.2?}]",
+            model.start_time.elapsed()
+        ));
     }
 
     if frame_count >= SAMPLES {
         return;
     }
 
-    let window = app.window(model._window_id);
     let queue = window.queue();
     let config = GpuConfig {
         environment: model._environment.to_gpu(),

@@ -14,6 +14,7 @@ use nannou::{image::RgbaImage, prelude::*};
 use rayon::prelude::*;
 
 struct Model {
+    window_id: Entity,
     texture: Handle<Image>,
     image_buffer: RgbaImage,
     accumulated_radiance: Vec<Vec3>,
@@ -30,7 +31,7 @@ fn main() {
 }
 
 fn model(app: &App) -> Model {
-    let _window = app.new_window().size(1024, 1024).view(view).build();
+    let window_id = app.new_window().size(1024, 1024).view(view).build();
 
     let width = app.window_rect().w() as u32;
     let height = app.window_rect().h() as u32;
@@ -52,6 +53,7 @@ fn model(app: &App) -> Model {
     let start_time = std::time::Instant::now();
 
     Model {
+        window_id,
         texture,
         image_buffer,
         accumulated_radiance,
@@ -64,12 +66,21 @@ fn model(app: &App) -> Model {
 
 fn update(app: &App, model: &mut Model) {
     let count = app.elapsed_frames();
-    if count == SAMPLES {
-        println!("CPU rendering of {} samples completed in {:?}", SAMPLES, model.start_time.elapsed());
+
+    let window = app.window(model.window_id);
+    if count < SAMPLES {
+        window.set_title(&format!("ray_tracing [{} / {} samples]", count, SAMPLES));
+    } else if count == SAMPLES {
+        window.set_title(&format!(
+            "ray_tracing [Completed in {:.2?}]",
+            model.start_time.elapsed()
+        ));
     }
+
     if count >= SAMPLES {
         return;
     }
+
     let width = model.image_buffer.width();
     let _height = model.image_buffer.height();
 
