@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 static WIDTH: u32 = 1024;
 static HEIGHT: u32 = 1024;
-static SAMPLES: u32 = 512;
+static SAMPLES: u32 = 2048;
 
 #[derive(Clone)]
 struct Model {

@@ -24,7 +24,7 @@ struct Model {
     start_time: std::time::Instant,
 }
 
-static SAMPLES: u64 = 512;
+static SAMPLES: u64 = 2048;
 
 fn main() {
     nannou::app(model).update(update).run();
