@@ -8,10 +8,11 @@ use crate::{
     ui::{display_fps, display_vector},
 };
 use bevy::{
-    camera::{Camera2d, RenderTarget},
-    prelude::{
-        AlignItems, BackgroundColor, Button, Camera, ClearColorConfig, JustifyContent, Node, Text,
-        TextColor, TextFont, UiTargetCamera, Val,
+    camera::{Camera, Camera2d, RenderTarget},
+    text::{TextColor, TextFont},
+    ui::{
+        AlignItems, BackgroundColor, JustifyContent, Node, UiTargetCamera, Val,
+        widget::{Button, Text},
     },
     window::WindowRef,
 };

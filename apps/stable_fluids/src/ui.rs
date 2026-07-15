@@ -55,12 +55,10 @@ pub fn display_fps(draw: &Draw, app: &App, window_rect: Rect) {
         .xy(window_rect.top_left() + text_wh / 2.0)
         .wh(text_wh)
         .color(BLACK);
-    draw.text(&format!("fps: {:.2}", fps))
+    draw.text(&format!("fps: {:.0}", fps))
         .xy(window_rect.top_left() + text_wh / 2.0)
         .wh(text_wh)
         .center_justify()
         .align_text_middle_y()
         .color(Color::srgb_u8(255, 200, 0));
 }
-
-pub fn display_gui() {}
