@@ -1,5 +1,6 @@
 use nannou::prelude::*;
 use ndarray::Array2;
+use rayon::prelude::*;
 
 pub const X_N: usize = 120;
 pub const Y_N: usize = 90;
@@ -76,25 +77,35 @@ impl Solver {
         let mx = mouse_pos.x * X_N as f32 / width;
         let my = mouse_pos.y * Y_N as f32 / height;
 
-        for i in 1..X_N - 1 {
-            for j in 1..Y_N - 1 {
-                let pct = 1.0
-                    - (pt2(i as f32, j as f32) - pt2(mx as f32, my as f32)).length()
-                        / self.src_rad as f32;
-                let pct = 0.0.max(pct);
+        let u_slice = self.u[self.velocity_index.0].as_slice_mut().unwrap();
+        let v_slice = self.v[self.velocity_index.0].as_slice_mut().unwrap();
 
-                let mut vel = mouse_vel * pct;
+        u_slice
+            .par_iter_mut()
+            .zip(v_slice.par_iter_mut())
+            .enumerate()
+            .for_each(|(idx, (u_val, v_val))| {
+                let i = idx / Y_N;
+                let j = idx % Y_N;
 
-                vel.x += self.u[self.velocity_index.0][[i, j]];
-                vel.y += self.v[self.velocity_index.0][[i, j]];
+                if i > 0 && i < X_N - 1 && j > 0 && j < Y_N - 1 {
+                    let pct = 1.0
+                        - (pt2(i as f32, j as f32) - pt2(mx as f32, my as f32)).length()
+                            / self.src_rad as f32;
+                    let pct = 0.0.max(pct);
 
-                // 速さ制限
-                let vel = vel.clamp_length_max(5.0);
+                    let mut vel = mouse_vel * pct;
 
-                self.u[self.velocity_index.0][[i, j]] = vel.x;
-                self.v[self.velocity_index.0][[i, j]] = vel.y;
-            }
-        }
+                    vel.x += *u_val;
+                    vel.y += *v_val;
+
+                    // 速さ制限
+                    let vel = vel.clamp_length_max(5.0);
+
+                    *u_val = vel.x;
+                    *v_val = vel.y;
+                }
+            });
     }
 
     fn add_source_ink() {

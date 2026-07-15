@@ -5,7 +5,15 @@ mod ui;
 use crate::{
     nannou_utils::Point2Ext,
     solver::{Solver, X_N, Y_N},
-    ui::display_vector,
+    ui::{display_fps, display_vector},
+};
+use bevy::{
+    camera::{Camera2d, RenderTarget},
+    prelude::{
+        AlignItems, BackgroundColor, Button, Camera, ClearColorConfig, JustifyContent, Node, Text,
+        TextColor, TextFont, UiTargetCamera, Val,
+    },
+    window::WindowRef,
 };
 use nannou::{
     image::{Rgba, RgbaImage},
@@ -53,6 +61,54 @@ fn model(app: &App) -> Model {
 
     let solver = Solver::new(window_rect);
 
+    app.command_scope(|mut commands| {
+        let camera_entity = commands
+            .spawn((
+                Camera2d,
+                Camera {
+                    clear_color: ClearColorConfig::None,
+                    order: 10,
+                    ..default()
+                },
+                RenderTarget::Window(WindowRef::Entity(window)),
+            ))
+            .id();
+        commands
+            .spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                UiTargetCamera(camera_entity),
+            ))
+            .with_children(|parent| {
+                parent
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(150.0),
+                            height: Val::Px(50.0),
+                            align_items: AlignItems::Center,
+                            justify_content: JustifyContent::Center,
+                            ..default()
+                        },
+                        BackgroundColor(bevy::prelude::Color::srgb(0.2, 0.6, 1.0)),
+                    ))
+                    .with_children(|button| {
+                        button.spawn((
+                            Text::new("UI Test"),
+                            TextFont {
+                                font_size: bevy::text::FontSize::Px(20.0),
+                                ..default()
+                            },
+                            TextColor(bevy::prelude::Color::WHITE),
+                        ));
+                    });
+            });
+    });
     Model {
         _window: window,
         texture,
@@ -75,10 +131,10 @@ fn update(app: &App, model: &mut Model) {
     if model.is_simulation_running {
         model.solver.update_solver(
             mouse_pressed,
-            mouse_pos.to_screen_coords(&window_rect),
+            mouse_pos.to_screen_coords(window_rect),
             model
                 .prev_mouse_pos
-                .map(|pos| pos.to_screen_coords(&window_rect)),
+                .map(|pos| pos.to_screen_coords(window_rect)),
         );
     }
 
@@ -110,6 +166,9 @@ fn update(app: &App, model: &mut Model) {
 
 fn view(app: &App, model: &Model) {
     let draw = app.draw();
+
+    draw.background().color(BLACK);
+
     let solver = &model.solver;
 
     let window_rect = app.window_rect();
@@ -124,4 +183,5 @@ fn view(app: &App, model: &Model) {
             solver.v[solver.velocity_index.0].view(),
         );
     }
+    display_fps(&draw, app, window_rect);
 }

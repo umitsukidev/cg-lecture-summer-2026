@@ -4,6 +4,7 @@ AVFOUNDATION
 BGRA
 bytemuck
 DYLD
+egui
 etai
 etat
 farneback
