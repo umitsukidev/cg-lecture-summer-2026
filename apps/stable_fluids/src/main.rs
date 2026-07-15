@@ -120,8 +120,8 @@ fn view(app: &App, model: &Model) {
         display_vector(
             &draw,
             window_rect,
-            &solver.u[solver.velocity_index.0],
-            &solver.v[solver.velocity_index.0],
+            solver.u[solver.velocity_index.0].view(),
+            solver.v[solver.velocity_index.0].view(),
         );
     }
 }

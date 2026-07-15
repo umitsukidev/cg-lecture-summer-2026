@@ -3,13 +3,9 @@ use crate::{
     solver::{H, X_N, Y_N},
 };
 use nannou::prelude::*;
+use ndarray::ArrayView2;
 
-pub fn display_vector(
-    draw: &Draw,
-    window_rect: Rect,
-    u: &[[f32; X_N]; Y_N],
-    v: &[[f32; X_N]; Y_N],
-) {
+pub fn display_vector(draw: &Draw, window_rect: Rect, u: ArrayView2<f32>, v: ArrayView2<f32>) {
     let width = window_rect.w();
     let height = window_rect.h();
 
@@ -20,7 +16,7 @@ pub fn display_vector(
                 (i as f32 + 0.5) * width / X_N as f32,
                 (j as f32 + 0.5) * height / Y_N as f32,
             );
-            let v = vec2(u[j][i], v[j][i]) * l * 4.1;
+            let v = vec2(u[[i, j]], v[[i, j]]) * l * 4.1;
             let to = from + v;
 
             if v.length() > 0.0 {

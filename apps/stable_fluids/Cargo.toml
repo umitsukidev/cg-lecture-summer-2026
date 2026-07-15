@@ -6,4 +6,5 @@ license.workspace = true
 
 [dependencies]
 nannou.workspace = true
+ndarray.workspace = true
 rayon.workspace = true

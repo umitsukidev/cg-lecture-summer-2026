@@ -1,4 +1,5 @@
 use nannou::prelude::*;
+use ndarray::Array2;
 
 pub const X_N: usize = 120;
 pub const Y_N: usize = 90;
@@ -11,11 +12,11 @@ pub struct Solver {
     max_gs_iterate: u32,
     src_rad: u32,
     src_vel_amp: f32,
-    pub u: [[[f32; X_N]; Y_N]; 2],
-    pub v: [[[f32; X_N]; Y_N]; 2],
-    div: [[f32; X_N]; Y_N],
-    prs: [[f32; X_N]; Y_N],
-    pub ink: [[[f32; X_N]; Y_N]; 2],
+    pub u: [Array2<f32>; 2],
+    pub v: [Array2<f32>; 2],
+    pub div: Array2<f32>,
+    pub prs: Array2<f32>,
+    pub ink: [Array2<f32>; 2],
     /// (current, prev)
     pub velocity_index: (usize, usize),
     /// (current, prev)
@@ -30,11 +31,11 @@ impl Solver {
             max_gs_iterate: 50,
             src_rad: 4,
             src_vel_amp: 0.1,
-            u: [[[0.0; X_N]; Y_N]; 2],
-            v: [[[0.0; X_N]; Y_N]; 2],
-            div: [[0.0; X_N]; Y_N],
-            prs: [[0.0; X_N]; Y_N],
-            ink: [[[0.0; X_N]; Y_N]; 2],
+            u: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
+            v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
+            div: Array2::zeros((X_N, Y_N)),
+            prs: Array2::zeros((X_N, Y_N)),
+            ink: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             velocity_index: (0, 1),
             ink_index: (0, 1),
         }
@@ -84,14 +85,14 @@ impl Solver {
 
                 let mut vel = mouse_vel * pct;
 
-                vel.x += self.u[self.velocity_index.0][j][i];
-                vel.y += self.v[self.velocity_index.0][j][i];
+                vel.x += self.u[self.velocity_index.0][[i, j]];
+                vel.y += self.v[self.velocity_index.0][[i, j]];
 
                 // 速さ制限
                 let vel = vel.clamp_length_max(5.0);
 
-                self.u[self.velocity_index.0][j][i] = vel.x;
-                self.v[self.velocity_index.0][j][i] = vel.y;
+                self.u[self.velocity_index.0][[i, j]] = vel.x;
+                self.v[self.velocity_index.0][[i, j]] = vel.y;
             }
         }
     }
