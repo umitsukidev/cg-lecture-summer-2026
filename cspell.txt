@@ -27,6 +27,7 @@ Rainer
 rgba
 rustflags
 skytree
+srgb
 STEELBLUE
 tangentspace
 thresholding
