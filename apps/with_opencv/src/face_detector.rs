@@ -1,11 +1,11 @@
-use opencv::{core, imgproc, objdetect, prelude::*};
+use opencv::{core, imgproc, prelude::*, xobjdetect};
 
 pub struct FaceDetectorResult {
     pub faces: Vec<core::Rect>,
 }
 
 pub struct FaceDetector {
-    face_cascade: objdetect::CascadeClassifier,
+    face_cascade: xobjdetect::CascadeClassifier,
 }
 
 impl FaceDetector {
@@ -15,7 +15,7 @@ impl FaceDetector {
             manifest_dir.join("assets/haarcascades/haarcascade_frontalface_default.xml");
         let face_cascade_path_str = face_cascade_path.to_str().unwrap().to_string();
 
-        let face_cascade = objdetect::CascadeClassifier::new(&face_cascade_path_str)
+        let face_cascade = xobjdetect::CascadeClassifier::new(&face_cascade_path_str)
             .expect("Failed to load face cascade");
 
         Self { face_cascade }

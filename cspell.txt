@@ -38,4 +38,5 @@ videoio
 wgpu
 wgsl
 workgroups
+xobjdetect
 Zeroable
