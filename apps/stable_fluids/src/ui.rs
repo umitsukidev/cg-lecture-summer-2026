@@ -51,7 +51,7 @@ pub fn display_grids(draw: &Draw, window_rect: Rect) {
 
 pub fn display_gui(app: &App, model: &mut Model) {
     let egui = app.egui();
-    let fps = app.fps();
+    let fps = model.displayed_fps;
 
     egui::Area::new(egui::Id::new("fps_area"))
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(10.0, 10.0))

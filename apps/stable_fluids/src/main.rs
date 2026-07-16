@@ -22,6 +22,8 @@ pub struct Model {
     show_display_velocity: bool,
     prev_mouse_pos: Option<Point2>,
     solver: Solver,
+    displayed_fps: f32,
+    last_fps_update: std::time::Instant,
 }
 
 fn main() {
@@ -62,6 +64,8 @@ fn model(app: &App) -> Model {
         show_display_velocity: true,
         prev_mouse_pos: None,
         solver,
+        displayed_fps: 0.0,
+        last_fps_update: std::time::Instant::now(),
     }
 }
 
@@ -107,6 +111,11 @@ fn update(app: &App, model: &mut Model) {
     });
 
     model.prev_mouse_pos = if mouse_pressed { Some(mouse_pos) } else { None };
+
+    if model.last_fps_update.elapsed() >= std::time::Duration::from_millis(500) {
+        model.displayed_fps = app.fps() as f32;
+        model.last_fps_update = std::time::Instant::now();
+    }
 
     display_gui(app, model);
 }
