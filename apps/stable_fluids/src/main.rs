@@ -69,7 +69,8 @@ fn update(app: &App, model: &mut Model) {
     let window_rect = app.window_rect();
     let width = model.image_buffer.width();
     let _height = model.image_buffer.height();
-    let mouse_pressed = app.mouse_buttons().pressed(MouseButton::Left);
+    let mouse_pressed =
+        app.mouse_buttons().pressed(MouseButton::Left) && !app.egui().egui_wants_pointer_input();
     let mouse_pos = app.mouse();
 
     if model.is_simulation_running {
