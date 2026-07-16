@@ -3,7 +3,13 @@ use crate::{
     nannou_utils::Point2Ext,
     solver::{H, X_N, Y_N},
 };
-use nannou::prelude::*;
+use nannou::prelude::{
+    egui::{
+        FontTweak,
+        epaint::text::{Tag, VariationCoords},
+    },
+    *,
+};
 use ndarray::ArrayView2;
 use std::sync::Arc;
 
@@ -73,15 +79,26 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             fonts.font_data.insert(
                 "NotoSansJP".to_owned(),
-                Arc::new(egui::FontData::from_static(include_bytes!(
-                    "../assets/NotoSansJP-VariableFont_wght.ttf"
-                ))),
+                Arc::new({
+                    let axes_settings = [(Tag::new(b"wght"), 400.0)];
+                    let coords = VariationCoords::new(axes_settings);
+
+                    egui::FontData::from_static(include_bytes!(
+                        "../assets/NotoSansJP-VariableFont_wght.ttf"
+                    ))
+                    .tweak(FontTweak {
+                        coords,
+                        ..Default::default()
+                    })
+                }),
             );
+
             fonts
                 .families
                 .entry(egui::FontFamily::Proportional)
                 .or_default()
                 .insert(0, "NotoSansJP".to_owned());
+
             ui.set_fonts(fonts);
 
             ui.style_mut().interaction.selectable_labels = false;

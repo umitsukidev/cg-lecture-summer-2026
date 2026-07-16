@@ -1,6 +1,5 @@
 use nannou::prelude::*;
-use ndarray::Array2;
-use rayon::prelude::*;
+use ndarray::{Array2, Zip, s};
 
 pub const X_N: usize = 120;
 pub const Y_N: usize = 90;
@@ -77,34 +76,32 @@ impl Solver {
         let mx = mouse_pos.x * X_N as f32 / width;
         let my = mouse_pos.y * Y_N as f32 / height;
 
-        let u_slice = self.u[self.velocity_index.0].as_slice_mut().unwrap();
-        let v_slice = self.v[self.velocity_index.0].as_slice_mut().unwrap();
+        // 壁を取り除く
+        let mut u_inner = self.u[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+        let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
 
-        u_slice
-            .par_iter_mut()
-            .zip(v_slice.par_iter_mut())
-            .enumerate()
-            .for_each(|(idx, (u_val, v_val))| {
-                let i = idx / Y_N;
-                let j = idx % Y_N;
+        Zip::indexed(&mut u_inner)
+            .and(&mut v_inner)
+            .par_for_each(|(i, j), u_val, v_val| {
+                // 壁を取り除いたぶんのインデックスの調整
+                let i = i + 1;
+                let j = j + 1;
 
-                if i > 0 && i < X_N - 1 && j > 0 && j < Y_N - 1 {
-                    let pct = 1.0
-                        - (pt2(i as f32, j as f32) - pt2(mx as f32, my as f32)).length()
-                            / self.src_rad as f32;
-                    let pct = 0.0.max(pct);
+                let pct = 1.0
+                    - (pt2(i as f32, j as f32) - pt2(mx as f32, my as f32)).length()
+                        / self.src_rad as f32;
+                let pct = 0.0.max(pct);
 
-                    let mut vel = mouse_vel * pct;
+                let mut vel = mouse_vel * pct;
 
-                    vel.x += *u_val;
-                    vel.y += *v_val;
+                vel.x += *u_val;
+                vel.y += *v_val;
 
-                    // 速さ制限
-                    let vel = vel.clamp_length_max(5.0);
+                // 速さ制限
+                let vel = vel.clamp_length_max(5.0);
 
-                    *u_val = vel.x;
-                    *v_val = vel.y;
-                }
+                *u_val = vel.x;
+                *v_val = vel.y;
             });
     }
 

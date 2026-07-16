@@ -6,5 +6,5 @@ license.workspace = true
 
 [dependencies]
 nannou = { workspace = true, features = ["egui"] }
-ndarray.workspace = true
+ndarray = { workspace = true, features = ["rayon"] }
 rayon.workspace = true
