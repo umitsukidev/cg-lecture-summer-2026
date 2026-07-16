@@ -5,16 +5,7 @@ mod ui;
 use crate::{
     nannou_utils::Point2Ext,
     solver::{Solver, X_N, Y_N},
-    ui::{display_fps, display_vector},
-};
-use bevy::{
-    camera::{Camera, Camera2d, RenderTarget},
-    text::{TextColor, TextFont},
-    ui::{
-        AlignItems, BackgroundColor, JustifyContent, Node, UiTargetCamera, Val,
-        widget::{Button, Text},
-    },
-    window::WindowRef,
+    ui::{display_grids, display_gui, display_vector},
 };
 use nannou::{
     image::{Rgba, RgbaImage},
@@ -22,7 +13,7 @@ use nannou::{
 };
 use rayon::prelude::*;
 
-struct Model {
+pub struct Model {
     _window: Entity,
     texture: Handle<Image>,
     image_buffer: RgbaImage,
@@ -62,54 +53,6 @@ fn model(app: &App) -> Model {
 
     let solver = Solver::new(window_rect);
 
-    app.command_scope(|mut commands| {
-        let camera_entity = commands
-            .spawn((
-                Camera2d,
-                Camera {
-                    clear_color: ClearColorConfig::None,
-                    order: 10,
-                    ..default()
-                },
-                RenderTarget::Window(WindowRef::Entity(window)),
-            ))
-            .id();
-        commands
-            .spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                UiTargetCamera(camera_entity),
-            ))
-            .with_children(|parent| {
-                parent
-                    .spawn((
-                        Button,
-                        Node {
-                            width: Val::Px(150.0),
-                            height: Val::Px(50.0),
-                            align_items: AlignItems::Center,
-                            justify_content: JustifyContent::Center,
-                            ..default()
-                        },
-                        BackgroundColor(bevy::prelude::Color::srgb(0.2, 0.6, 1.0)),
-                    ))
-                    .with_children(|button| {
-                        button.spawn((
-                            Text::new("UI Test"),
-                            TextFont {
-                                font_size: bevy::text::FontSize::Px(20.0),
-                                ..default()
-                            },
-                            TextColor(bevy::prelude::Color::WHITE),
-                        ));
-                    });
-            });
-    });
     Model {
         _window: window,
         texture,
@@ -163,6 +106,8 @@ fn update(app: &App, model: &mut Model) {
     });
 
     model.prev_mouse_pos = if mouse_pressed { Some(mouse_pos) } else { None };
+
+    display_gui(app, model);
 }
 
 fn view(app: &App, model: &Model) {
@@ -176,6 +121,10 @@ fn view(app: &App, model: &Model) {
 
     draw.rect().wh(window_rect.wh()).texture(&model.texture);
 
+    if model.show_display_grids {
+        display_grids(&draw, window_rect);
+    }
+
     if model.show_display_velocity {
         display_vector(
             &draw,
@@ -184,5 +133,4 @@ fn view(app: &App, model: &Model) {
             solver.v[solver.velocity_index.0].view(),
         );
     }
-    display_fps(&draw, app, window_rect);
 }

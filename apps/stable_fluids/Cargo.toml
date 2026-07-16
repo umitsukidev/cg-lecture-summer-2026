@@ -5,7 +5,6 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-bevy = "0.19.0"
-nannou.workspace = true
+nannou = { workspace = true, features = ["egui"] }
 ndarray.workspace = true
 rayon.workspace = true

@@ -11,3 +11,10 @@ The source code in this repository is licensed under the [MIT License](LICENSE).
 >
 > - **English:** Please note that all image files located in the `/apps/metaball/apps/exercise_c/assets/images/` directory are **NOT** covered by the MIT license. All rights are reserved by the author. Copying, redistributing, modifying, or using these images for any purpose without explicit permission is strictly prohibited.
 > - **日本語:** `/apps/metaball/apps/exercise_c/assets/images/` ディレクトリ内のすべての画像ファイルは、MITライセンスの**適用外**となります。著作者がすべての権利を保有しており、事前の許可なくこれらを複製、再配布、改変、または目的を問わず使用することは固く禁止します。
+
+## Fonts / フォント
+
+- **Noto Sans JP**: `apps/stable_fluids/assets/` に含まれるフォントファイルは、[SIL Open Font License 1.1](apps/stable_fluids/assets/OFL.txt) に基づいてライセンスされています。
+  - Copyright 2020-2022 The Noto Project Authors (https://github.com/notofonts/noto-cjk)
+  - Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+
