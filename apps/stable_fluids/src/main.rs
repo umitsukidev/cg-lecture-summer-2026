@@ -8,11 +8,14 @@ use crate::{
 };
 use nannou::{image::RgbaImage, prelude::*};
 use rayon::prelude::*;
+use std::sync::{
+    Mutex,
+    mpsc::{Receiver, Sender},
+};
 
 pub struct Model {
     _window: Entity,
     texture: Handle<Image>,
-    image_buffer: RgbaImage,
     is_simulation_running: bool,
     show_display_grids: bool,
     show_display_velocity: bool,
@@ -20,6 +23,8 @@ pub struct Model {
     solver: Solver,
     displayed_fps: f32,
     last_fps_update: std::time::Instant,
+    pixel_rx: Mutex<Receiver<Vec<u8>>>,
+    pixel_tx: Sender<Vec<u8>>,
 }
 
 fn main() {
@@ -52,10 +57,11 @@ fn model(app: &App) -> Model {
 
     let solver = Solver::new(window_rect);
 
+    let (pixel_tx, pixel_rx) = std::sync::mpsc::channel();
+
     Model {
         _window: window,
         texture,
-        image_buffer,
         is_simulation_running: true,
         show_display_grids: false,
         show_display_velocity: false,
@@ -63,12 +69,15 @@ fn model(app: &App) -> Model {
         solver,
         displayed_fps: 0.0,
         last_fps_update: std::time::Instant::now(),
+        pixel_rx: Mutex::new(pixel_rx),
+        pixel_tx,
     }
 }
 
 fn update(app: &App, model: &mut Model) {
-    let width = model.image_buffer.width();
-    let _height = model.image_buffer.height();
+    let window_rect = app.window_rect();
+    let width = window_rect.w() as u32;
+    let height = window_rect.h() as u32;
     let mouse_pressed =
         app.mouse_buttons().pressed(MouseButton::Left) && !app.egui().egui_wants_pointer_input();
     let mouse_pos = app.mouse();
@@ -79,8 +88,16 @@ fn update(app: &App, model: &mut Model) {
             .update_solver(mouse_pressed, mouse_pos, model.prev_mouse_pos);
     }
 
-    model
-        .image_buffer
+    let raw_pixels = model
+        .pixel_rx
+        .lock()
+        .unwrap()
+        .try_recv()
+        .unwrap_or_else(|_| vec![0; (width * height * 4) as usize]);
+
+    let mut image_buffer = RgbaImage::from_raw(width, height, raw_pixels).unwrap();
+
+    image_buffer
         .as_flat_samples_mut()
         .samples
         .par_chunks_mut(4)
@@ -97,8 +114,12 @@ fn update(app: &App, model: &mut Model) {
             chunk[3] = pixel[3];
         });
 
-    let pixels = model.image_buffer.as_raw().clone();
+    let pixels = image_buffer.into_raw();
+    let tx = model.pixel_tx.clone();
     app.modify_image(&model.texture, move |image| {
+        if let Some(old_pixels) = image.data.take() {
+            let _ = tx.send(old_pixels);
+        }
         image.data = Some(pixels);
     });
 
