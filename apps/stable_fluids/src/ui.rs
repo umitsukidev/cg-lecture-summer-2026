@@ -118,6 +118,15 @@ pub fn display_gui(app: &App, model: &mut Model) {
             )
             .labelled_by(src_vel_amp.id);
 
+            let src_ink_amp = ui.label("src_ink_amp");
+            ui.add(
+                egui::Slider::new(&mut model.solver.src_ink_amp, 0.0..=0.4)
+                    .step_by(0.01)
+                    .smart_aim(false)
+                    .fixed_decimals(2),
+            )
+            .labelled_by(src_ink_amp.id);
+
             let src_rad = ui.label("src_rad");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_rad, 0.01..=10.0)

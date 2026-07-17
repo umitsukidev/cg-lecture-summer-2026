@@ -14,6 +14,7 @@ pub struct Solver {
     pub max_gs_iterate: u32,
     pub src_rad: f32,
     pub src_vel_amp: f32,
+    pub src_ink_amp: f32,
     pub u: [Array2<f32>; 2],
     pub v: [Array2<f32>; 2],
     pub div: Array2<f32>,
@@ -36,6 +37,7 @@ impl Solver {
             max_gs_iterate: 50,
             src_rad: 4.0,
             src_vel_amp: 0.1,
+            src_ink_amp: 0.1,
             u: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             div: Array2::zeros((X_N, Y_N)),
@@ -63,7 +65,7 @@ impl Solver {
         self.add_source_ink();
         // self.projection_velocity();
         self.advection_velocity();
-        // self.advection_ink();
+        self.advection_ink();
     }
 
     fn add_source_velocity(&mut self) {
@@ -139,7 +141,7 @@ impl Solver {
                 let pct = 1.0
                     - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx as f32, my as f32))
                         / self.src_rad as f32;
-                let pct = 0.0.max(pct);
+                let pct = 0.0.max(pct) * self.src_ink_amp;
 
                 *ink_val += pct;
             });
@@ -210,8 +212,47 @@ impl Solver {
             })
     }
 
-    fn advection_ink() {
-        todo!()
+    fn advection_ink(&mut self) {
+        self.ink_index = (self.ink_index.1, self.ink_index.0);
+
+        let [ink0, ink1] = &mut self.ink;
+
+        let current_is_first = self.ink_index.0 == 0;
+
+        let (ink_curr, ink_prev) = if current_is_first {
+            (ink0, &*ink1)
+        } else {
+            (ink1, &*ink0)
+        };
+
+        // 壁を取り除く
+        let mut ink_inner = ink_curr.slice_mut(s![1..-1, 1..-1]);
+
+        Zip::indexed(&mut ink_inner).par_for_each(|(i, j), ink_val| {
+            // 壁を取り除いたぶんのインデックスの調整
+            let i = i + 1;
+            let j = j + 1;
+
+            let px = ((i as f32) * H - self.u[self.velocity_index.0][[i, j]] * self.dt) / H;
+            let py = ((j as f32) * H - self.v[self.velocity_index.0][[i, j]] * self.dt) / H;
+
+            let (i0, j0) = (
+                (px.floor()).clamp(1.0, X_N as f32 - 2.0) as usize,
+                (py.floor()).clamp(1.0, Y_N as f32 - 2.0) as usize,
+            );
+            let (i1, j1) = (i0 + 1, j0 + 1);
+
+            let s = px - i0 as f32;
+            let t = py - j0 as f32;
+
+            let ink = (
+                (ink_prev[[i0, j0]], ink_prev[[i0, j1]]),
+                (ink_prev[[i1, j0]], ink_prev[[i1, j1]]),
+            );
+            let ink = Self::bilinear(s, t, ink);
+
+            *ink_val = ink;
+        })
     }
 
     fn bilinear(x: f32, y: f32, ((v00, v01), (v10, v11)): ((f32, f32), (f32, f32))) -> f32 {
@@ -233,7 +274,7 @@ impl Solver {
             Rgba::<u8>([60, 60, 150, 255])
         } else {
             let pixel = ((self.ink[self.ink_index.0][[x, y]] * 255.0) as u8).clamp(0, 255);
-            Rgba([pixel, pixel, pixel, 0])
+            Rgba([pixel, pixel, pixel, 255])
         }
     }
 
