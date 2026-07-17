@@ -2,8 +2,8 @@ use crate::nannou_utils::Point2Ext;
 use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
 
-pub const X_N: usize = 120;
-pub const Y_N: usize = 90;
+pub const X_N: usize = 400;
+pub const Y_N: usize = 300;
 pub const H: f32 = 1.0 / (if X_N > Y_N { X_N } else { Y_N }) as f32;
 
 #[derive(Debug, Clone)]

@@ -10,31 +10,73 @@ use nannou::prelude::{
     },
     *,
 };
-use ndarray::ArrayView2;
+use ndarray::{ArrayView2, Zip};
 use std::sync::Arc;
 
-pub fn display_vector(draw: &Draw, window_rect: Rect, u: ArrayView2<f32>, v: ArrayView2<f32>) {
+pub fn update_vector_mesh(
+    vector_mesh: &mut ndarray::Array2<[geom::Tri<(Point3, Color)>; 2]>,
+    u: ArrayView2<f32>,
+    v: ArrayView2<f32>,
+    window_rect: Rect,
+) {
     let width = window_rect.w();
     let height = window_rect.h();
-
     let l = width * H * 0.5;
-    for i in 0..X_N {
-        for j in 0..Y_N {
+
+    Zip::indexed(vector_mesh)
+        .and(&u)
+        .and(&v)
+        .par_for_each(|(i, j), mesh_pair, &val_u, &val_v| {
             let from = pt2(
                 (i as f32 + 0.5) * width / X_N as f32,
                 (j as f32 + 0.5) * height / Y_N as f32,
             );
-            let v = vec2(u[[i, j]], v[[i, j]]) * l * 4.1;
-            let to = from + v;
+            let vel = vec2(val_u, val_v) * l * 4.1;
+            let to = from + vel;
 
-            if v.length() > 0.0 {
-                draw.line()
-                    .start(from.to_mathematical_coords(window_rect))
-                    .end(to.to_mathematical_coords(window_rect))
-                    .color(Color::srgb_u8(255, 200, 0));
+            if vel.length() > 1e-5 {
+                let from_math = from.to_mathematical_coords(window_rect);
+                let to_math = to.to_mathematical_coords(window_rect);
+                let d = to_math - from_math;
+                let len = d.length();
+                if len > 1e-5 {
+                    let dir = d / len;
+                    let thick = 1.0;
+                    let normal = vec2(-dir.y, dir.x) * (thick * 0.5);
+
+                    let p1 = (from_math + normal).extend(0.0);
+                    let p2 = (from_math - normal).extend(0.0);
+                    let p3 = (to_math + normal).extend(0.0);
+                    let p4 = (to_math - normal).extend(0.0);
+
+                    let color = Color::srgb_u8(255, 200, 0);
+
+                    mesh_pair[0] = geom::Tri([(p1, color), (p2, color), (p3, color)]);
+                    mesh_pair[1] = geom::Tri([(p2, color), (p4, color), (p3, color)]);
+                    return;
+                }
             }
-        }
-    }
+
+            let zero_pt = pt3(0.0, 0.0, 0.0);
+            let zero_color = Color::srgb_u8(0, 0, 0);
+            let zero_tri = geom::Tri([
+                (zero_pt, zero_color),
+                (zero_pt, zero_color),
+                (zero_pt, zero_color),
+            ]);
+            mesh_pair[0] = zero_tri.clone();
+            mesh_pair[1] = zero_tri;
+        });
+}
+
+pub fn display_vector(draw: &Draw, vector_mesh: &ndarray::Array2<[geom::Tri<(Point3, Color)>; 2]>) {
+    let tris = vector_mesh
+        .iter()
+        .flat_map(|pair| pair.iter())
+        .filter(|tri| tri.0[0].0 != tri.0[1].0)
+        .cloned();
+
+    draw.mesh().tris_colored(tris);
 }
 
 pub fn display_grids(draw: &Draw, window_rect: Rect) {

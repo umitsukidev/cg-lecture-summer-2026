@@ -4,7 +4,7 @@ mod ui;
 
 use crate::{
     solver::{Solver, X_N, Y_N},
-    ui::{display_grids, display_gui, display_vector},
+    ui::{display_grids, display_gui, display_vector, update_vector_mesh},
 };
 use nannou::{image::RgbaImage, prelude::*};
 use rayon::prelude::*;
@@ -25,6 +25,7 @@ pub struct Model {
     last_fps_update: std::time::Instant,
     pixel_rx: Mutex<Receiver<Vec<u8>>>,
     pixel_tx: Sender<Vec<u8>>,
+    vector_mesh: ndarray::Array2<[geom::Tri<(Point3, Color)>; 2]>,
 }
 
 fn main() {
@@ -34,7 +35,7 @@ fn main() {
 fn model(app: &App) -> Model {
     let window = app
         .new_window()
-        .size(X_N as u32 * 10, Y_N as u32 * 10)
+        .size(X_N as u32 * 3, Y_N as u32 * 3)
         .resizable(false)
         .key_pressed(key_pressed)
         .view(view)
@@ -60,6 +61,15 @@ fn model(app: &App) -> Model {
 
     let (pixel_tx, pixel_rx) = std::sync::mpsc::channel();
 
+    let zero_pt = pt3(0.0, 0.0, 0.0);
+    let zero_color = Color::srgb_u8(0, 0, 0);
+    let zero_tri = geom::Tri([
+        (zero_pt, zero_color),
+        (zero_pt, zero_color),
+        (zero_pt, zero_color),
+    ]);
+    let vector_mesh = ndarray::Array2::from_elem((X_N, Y_N), [zero_tri.clone(), zero_tri]);
+
     Model {
         _window: window,
         texture,
@@ -72,6 +82,7 @@ fn model(app: &App) -> Model {
         last_fps_update: std::time::Instant::now(),
         pixel_rx: Mutex::new(pixel_rx),
         pixel_tx,
+        vector_mesh,
     }
 }
 
@@ -131,6 +142,12 @@ fn update(app: &App, model: &mut Model) {
         model.last_fps_update = std::time::Instant::now();
     }
 
+    if model.show_display_velocity {
+        let u = model.solver.u[model.solver.velocity_index.0].view();
+        let v = model.solver.v[model.solver.velocity_index.0].view();
+        update_vector_mesh(&mut model.vector_mesh, u, v, window_rect);
+    }
+
     display_gui(app, model);
 }
 
@@ -138,8 +155,6 @@ fn view(app: &App, model: &Model) {
     let draw = app.draw();
 
     draw.background().color(BLACK);
-
-    let solver = &model.solver;
 
     let window_rect = app.window_rect();
 
@@ -150,12 +165,7 @@ fn view(app: &App, model: &Model) {
     }
 
     if model.show_display_velocity {
-        display_vector(
-            &draw,
-            window_rect,
-            solver.u[solver.velocity_index.0].view(),
-            solver.v[solver.velocity_index.0].view(),
-        );
+        display_vector(&draw, &model.vector_mesh);
     }
 }
 
