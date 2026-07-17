@@ -10,11 +10,12 @@ use nannou::prelude::{
     },
     *,
 };
-use ndarray::{ArrayView2, Zip};
-use std::sync::Arc;
+use ndarray::ArrayView2;
+use std::sync::{Arc, Mutex};
+use rayon::prelude::*;
 
 pub fn update_vector_mesh(
-    vector_mesh: &mut ndarray::Array2<[geom::Tri<(Point3, Color)>; 2]>,
+    vector_mesh: &mut [geom::Tri<(Point3, Color)>],
     u: ArrayView2<f32>,
     v: ArrayView2<f32>,
     window_rect: Rect,
@@ -23,10 +24,16 @@ pub fn update_vector_mesh(
     let height = window_rect.h();
     let l = width * H * 0.5;
 
-    Zip::indexed(vector_mesh)
-        .and(&u)
-        .and(&v)
-        .par_for_each(|(i, j), mesh_pair, &val_u, &val_v| {
+    vector_mesh
+        .par_iter_mut()
+        .enumerate()
+        .for_each(|(idx, mesh_tri)| {
+            let i = idx / Y_N;
+            let j = idx % Y_N;
+
+            let val_u = u[[i, j]];
+            let val_v = v[[i, j]];
+
             let from = pt2(
                 (i as f32 + 0.5) * width / X_N as f32,
                 (j as f32 + 0.5) * height / Y_N as f32,
@@ -44,15 +51,13 @@ pub fn update_vector_mesh(
                     let thick = 1.0;
                     let normal = vec2(-dir.y, dir.x) * (thick * 0.5);
 
-                    let p1 = (from_math + normal).extend(0.0);
-                    let p2 = (from_math - normal).extend(0.0);
-                    let p3 = (to_math + normal).extend(0.0);
-                    let p4 = (to_math - normal).extend(0.0);
+                    let p1 = (from_math - normal).extend(0.0);
+                    let p2 = (from_math + normal).extend(0.0);
+                    let p3 = to_math.extend(0.0);
 
                     let color = Color::srgb_u8(255, 200, 0);
 
-                    mesh_pair[0] = geom::Tri([(p1, color), (p2, color), (p3, color)]);
-                    mesh_pair[1] = geom::Tri([(p2, color), (p4, color), (p3, color)]);
+                    *mesh_tri = geom::Tri([(p1, color), (p2, color), (p3, color)]);
                     return;
                 }
             }
@@ -64,19 +69,23 @@ pub fn update_vector_mesh(
                 (zero_pt, zero_color),
                 (zero_pt, zero_color),
             ]);
-            mesh_pair[0] = zero_tri.clone();
-            mesh_pair[1] = zero_tri;
+            *mesh_tri = zero_tri;
         });
 }
 
-pub fn display_vector(draw: &Draw, vector_mesh: &ndarray::Array2<[geom::Tri<(Point3, Color)>; 2]>) {
-    let tris = vector_mesh
-        .iter()
-        .flat_map(|pair| pair.iter())
+pub fn display_vector(
+    draw: &Draw,
+    vector_mesh: &Mutex<Vec<geom::Tri<(Point3, Color)>>>,
+) {
+    let mut mesh_guard = vector_mesh.lock().unwrap();
+    let mut tris = mesh_guard
+        .drain(..)
         .filter(|tri| tri.0[0].0 != tri.0[1].0)
-        .cloned();
+        .peekable();
 
-    draw.mesh().tris_colored(tris);
+    if tris.peek().is_some() {
+        draw.mesh().tris_colored(tris);
+    }
 }
 
 pub fn display_grids(draw: &Draw, window_rect: Rect) {

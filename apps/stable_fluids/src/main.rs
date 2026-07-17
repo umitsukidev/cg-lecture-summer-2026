@@ -25,7 +25,7 @@ pub struct Model {
     last_fps_update: std::time::Instant,
     pixel_rx: Mutex<Receiver<Vec<u8>>>,
     pixel_tx: Sender<Vec<u8>>,
-    vector_mesh: ndarray::Array2<[geom::Tri<(Point3, Color)>; 2]>,
+    vector_mesh: Mutex<Vec<geom::Tri<(Point3, Color)>>>,
 }
 
 fn main() {
@@ -35,7 +35,7 @@ fn main() {
 fn model(app: &App) -> Model {
     let window = app
         .new_window()
-        .size(X_N as u32 * 3, Y_N as u32 * 3)
+        .size(X_N as u32 * 10, Y_N as u32 * 10)
         .resizable(false)
         .key_pressed(key_pressed)
         .view(view)
@@ -68,7 +68,9 @@ fn model(app: &App) -> Model {
         (zero_pt, zero_color),
         (zero_pt, zero_color),
     ]);
-    let vector_mesh = ndarray::Array2::from_elem((X_N, Y_N), [zero_tri.clone(), zero_tri]);
+    let mut initial_mesh = Vec::with_capacity(X_N * Y_N);
+    initial_mesh.resize(X_N * Y_N, zero_tri);
+    let vector_mesh = Mutex::new(initial_mesh);
 
     Model {
         _window: window,
@@ -100,12 +102,19 @@ fn update(app: &App, model: &mut Model) {
             .update_solver(mouse_pressed, mouse_pos, model.prev_mouse_pos);
     }
 
-    let raw_pixels = model
-        .pixel_rx
-        .lock()
-        .unwrap()
-        .try_recv()
-        .unwrap_or_else(|_| vec![0; (width * height * 4) as usize]);
+    let raw_pixels = {
+        let mut pixels = model
+            .pixel_rx
+            .lock()
+            .unwrap()
+            .try_recv()
+            .unwrap_or_else(|_| vec![0; (width * height * 4) as usize]);
+        let expected_size = (width * height * 4) as usize;
+        if pixels.len() != expected_size {
+            pixels.resize(expected_size, 0);
+        }
+        pixels
+    };
 
     let mut image_buffer = RgbaImage::from_raw(width, height, raw_pixels).unwrap();
 
@@ -143,9 +152,20 @@ fn update(app: &App, model: &mut Model) {
     }
 
     if model.show_display_velocity {
+        let mut mesh_guard = model.vector_mesh.lock().unwrap();
+        if mesh_guard.is_empty() {
+            let zero_pt = pt3(0.0, 0.0, 0.0);
+            let zero_color = Color::srgb_u8(0, 0, 0);
+            let zero_tri = geom::Tri([
+                (zero_pt, zero_color),
+                (zero_pt, zero_color),
+                (zero_pt, zero_color),
+            ]);
+            mesh_guard.resize(X_N * Y_N, zero_tri);
+        }
         let u = model.solver.u[model.solver.velocity_index.0].view();
         let v = model.solver.v[model.solver.velocity_index.0].view();
-        update_vector_mesh(&mut model.vector_mesh, u, v, window_rect);
+        update_vector_mesh(&mut mesh_guard, u, v, window_rect);
     }
 
     display_gui(app, model);
