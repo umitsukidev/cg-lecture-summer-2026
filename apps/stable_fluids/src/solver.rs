@@ -1,7 +1,6 @@
+use crate::nannou_utils::Point2Ext;
 use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
-
-use crate::nannou_utils::Point2Ext;
 
 pub const X_N: usize = 120;
 pub const Y_N: usize = 90;
