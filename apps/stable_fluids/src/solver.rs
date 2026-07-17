@@ -62,7 +62,7 @@ impl Solver {
         self.add_source_velocity();
         self.add_source_ink();
         // self.projection_velocity();
-        // self.advection_velocity();
+        self.advection_velocity();
         // self.advection_ink();
     }
 
@@ -150,8 +150,74 @@ impl Solver {
         todo!()
     }
 
-    fn advection_velocity() {
-        todo!()
+    fn advection_velocity(&mut self) {
+        self.velocity_index = (self.velocity_index.1, self.velocity_index.0);
+
+        let [u0, u1] = &mut self.u;
+        let [v0, v1] = &mut self.v;
+
+        let (u_curr, u_prev_full) = if self.velocity_index.0 == 0 {
+            (u0, &*u1)
+        } else {
+            (u1, &*u0)
+        };
+
+        let (v_curr, v_prev_full) = if self.velocity_index.0 == 0 {
+            (v0, &*v1)
+        } else {
+            (v1, &*v0)
+        };
+
+        // 壁を取り除く
+        let mut u_inner = u_curr.slice_mut(s![1..-1, 1..-1]);
+        let mut v_inner = v_curr.slice_mut(s![1..-1, 1..-1]);
+
+        let u_prev_inner = u_prev_full.slice(s![1..-1, 1..-1]);
+        let v_prev_inner = v_prev_full.slice(s![1..-1, 1..-1]);
+
+        Zip::indexed(&mut u_inner)
+            .and(&mut v_inner)
+            .and(&u_prev_inner)
+            .and(&v_prev_inner)
+            .par_for_each(|(i, j), u_val, v_val, u_prev_val, v_prev_val| {
+                // 壁を取り除いたぶんのインデックスの調整
+                let i = i + 1;
+                let j = j + 1;
+
+                // 0.5を足してグリッドの中心に補正
+                let px = (i as f32) * H;
+                let py = (j as f32) * H;
+
+                let px = px - u_prev_val * self.dt;
+                let py = py - v_prev_val * self.dt;
+
+                let px = px / H;
+                let py = py / H;
+
+                let (i0, j0) = (
+                    (px.floor()).clamp(1.0, X_N as f32 - 2.0) as usize,
+                    (py.floor()).clamp(1.0, Y_N as f32 - 2.0) as usize,
+                );
+                let (i1, j1) = (i0 + 1, j0 + 1);
+
+                let s = px - i0 as f32;
+                let t = py - j0 as f32;
+
+                let u = (
+                    (u_prev_full[[i0, j0]], u_prev_full[[i0, j1]]),
+                    (u_prev_full[[i1, j0]], u_prev_full[[i1, j1]]),
+                );
+                let vx = Self::bilinear(s, t, u);
+
+                let v = (
+                    (v_prev_full[[i0, j0]], v_prev_full[[i0, j1]]),
+                    (v_prev_full[[i1, j0]], v_prev_full[[i1, j1]]),
+                );
+                let vy = Self::bilinear(s, t, v);
+
+                *u_val = vx;
+                *v_val = vy;
+            })
     }
 
     fn advection_ink() {
