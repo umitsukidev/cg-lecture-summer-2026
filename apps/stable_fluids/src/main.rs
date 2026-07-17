@@ -62,7 +62,7 @@ fn model(app: &App) -> Model {
         image_buffer,
         is_simulation_running: true,
         show_display_grids: false,
-        show_display_velocity: true,
+        show_display_velocity: false,
         prev_mouse_pos: None,
         solver,
         displayed_fps: 0.0,
