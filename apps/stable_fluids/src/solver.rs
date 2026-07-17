@@ -174,20 +174,15 @@ impl Solver {
         let mut u_inner = u_curr.slice_mut(s![1..-1, 1..-1]);
         let mut v_inner = v_curr.slice_mut(s![1..-1, 1..-1]);
 
-        let u_prev_inner = u_prev.slice(s![1..-1, 1..-1]);
-        let v_prev_inner = v_prev.slice(s![1..-1, 1..-1]);
-
         Zip::indexed(&mut u_inner)
             .and(&mut v_inner)
-            .and(&u_prev_inner)
-            .and(&v_prev_inner)
-            .par_for_each(|(i, j), u_val, v_val, u_prev_val, v_prev_val| {
+            .par_for_each(|(i, j), u_val, v_val| {
                 // 壁を取り除いたぶんのインデックスの調整
                 let i = i + 1;
                 let j = j + 1;
 
-                let px = ((i as f32) * H - u_prev_val * self.dt) / H;
-                let py = ((j as f32) * H - v_prev_val * self.dt) / H;
+                let px = ((i as f32) * H - u_prev[[i, j]] * self.dt) / H;
+                let py = ((j as f32) * H - v_prev[[i, j]] * self.dt) / H;
 
                 let (i0, j0) = (
                     (px.floor()).clamp(1.0, X_N as f32 - 2.0) as usize,
@@ -238,7 +233,7 @@ impl Solver {
             Rgba::<u8>([60, 60, 150, 255])
         } else {
             let pixel = ((self.ink[self.ink_index.0][[x, y]] * 255.0) as u8).clamp(0, 255);
-            Rgba([pixel, pixel, pixel, 255])
+            Rgba([pixel, pixel, pixel, 0])
         }
     }
 
