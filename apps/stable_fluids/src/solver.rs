@@ -1,3 +1,8 @@
+use std::{
+    rc::Rc,
+    sync::{Arc, Mutex},
+};
+
 use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
 
@@ -103,7 +108,7 @@ impl Solver {
                     let pct = 1.0
                         - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx as f32, my as f32))
                             / self.src_rad as f32;
-                    let pct = 0.0.max(pct);
+                    let pct = f32::max(pct, 0.0);
 
                     let mut vel = mouse_vel * pct;
 
@@ -141,15 +146,66 @@ impl Solver {
                 let pct = 1.0
                     - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx as f32, my as f32))
                         / self.src_rad as f32;
-                let pct = 0.0.max(pct) * self.src_ink_amp;
+                let pct = f32::max(pct, 0.0) * self.src_ink_amp;
 
                 *ink_val += pct;
             });
         }
     }
 
-    fn projection_velocity() {
-        todo!()
+    fn projection_velocity(&mut self) {
+        // ---------------------------
+        // 1. 反復計算前の事前計算
+        // ---------------------------
+
+        // 壁を取り除く
+        let mut div_inner = self.div.slice_mut(s![1..-1, 1..-1]);
+
+        Zip::indexed(&mut div_inner).par_for_each(|(i, j), div_val| {
+            // 壁を取り除いたぶんのインデックスの修正
+            let i = i + 1;
+            let j = j + 1;
+        });
+
+        // ---------------------------
+        // 2. ガウス=ザイデル反復法の計算
+        // ---------------------------
+        let tolerance = 0.001;
+        for _ in 0..self.max_gs_iterate {
+            let mut err = 0.0;
+            let mut prs_inner = self.prs.slice_mut(s![1..-1, 1..-1]);
+
+            Zip::indexed(&mut prs_inner).for_each(|(i, j), prs_val| {
+                // 壁を取り除いたぶんのインデックスの修正
+                let i = i + 1;
+                let j = j + 1;
+
+                let prev_prs_val = *prs_val;
+
+                err = f32::max((prev_prs_val - *prs_val).abs(), err);
+            });
+
+            self.enforce_wall_pressure();
+
+            // 収束判定
+            if err < tolerance {
+                break;
+            }
+        }
+
+        // ---------------------------
+        // 3. 圧力勾配を求めて速度を更新
+        // ---------------------------
+        let mut u_inner = self.u[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+        let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+
+        Zip::indexed(&mut u_inner)
+            .and(&mut v_inner)
+            .par_for_each(|(i, j), u_val, v_val| {
+                // 壁を取り除いたぶんのインデックスの調整
+                let i = i + 1;
+                let j = j + 1;
+            });
     }
 
     fn advection_velocity(&mut self) {
