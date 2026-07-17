@@ -97,8 +97,9 @@ impl Solver {
                     let i = i + 1;
                     let j = j + 1;
 
+                    // 0.5を足してグリッドの中心に補正
                     let pct = 1.0
-                        - pt2(i as f32, j as f32).distance(pt2(mx as f32, my as f32))
+                        - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx as f32, my as f32))
                             / self.src_rad as f32;
                     let pct = 0.0.max(pct);
 
@@ -134,8 +135,9 @@ impl Solver {
                 let i = i + 1;
                 let j = j + 1;
 
+                // 0.5を足してグリッドの中心に補正
                 let pct = 1.0
-                    - pt2(i as f32, j as f32).distance(pt2(mx as f32, my as f32))
+                    - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx as f32, my as f32))
                         / self.src_rad as f32;
                 let pct = 0.0.max(pct);
 
