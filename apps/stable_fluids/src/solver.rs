@@ -158,6 +158,16 @@ impl Solver {
         todo!()
     }
 
+    fn bilinear(x: f32, y: f32, ((v00, v01), (v10, v11)): ((f32, f32), (f32, f32))) -> f32 {
+        let x = x.clamp(0.0, 1.0);
+        let y = y.clamp(0.0, 1.0);
+
+        let x_a = 1.0 - x;
+        let y_a = 1.0 - y;
+
+        v00 * x_a * y_a + v01 * x_a * y + v10 * x * y_a + v11 * x * y
+    }
+
     pub fn get_pixel(&self, x: usize, y: usize) -> Rgba<u8> {
         let x = x * X_N / self.window_rect.w() as usize;
         let y = y * Y_N / self.window_rect.h() as usize;
