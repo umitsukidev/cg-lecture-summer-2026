@@ -184,7 +184,6 @@ impl Solver {
                 let i = i + 1;
                 let j = j + 1;
 
-                // 0.5を足してグリッドの中心に補正
                 let px = (i as f32) * H;
                 let py = (j as f32) * H;
 
