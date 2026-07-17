@@ -120,4 +120,8 @@ impl Solver {
     fn advection_ink() {
         todo!()
     }
+
+    pub fn reset(&mut self) {
+        todo!()
+    }
 }

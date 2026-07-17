@@ -34,6 +34,7 @@ fn model(app: &App) -> Model {
     let window = app
         .new_window()
         .size(X_N as u32 * 10, Y_N as u32 * 10)
+        .key_pressed(key_pressed)
         .view(view)
         .build();
     app.set_update_rate(60.0);
@@ -142,5 +143,13 @@ fn view(app: &App, model: &Model) {
             solver.u[solver.velocity_index.0].view(),
             solver.v[solver.velocity_index.0].view(),
         );
+    }
+}
+
+fn key_pressed(app: &App, model: &mut Model, key: KeyCode) {
+    match key {
+        KeyCode::Escape => app.quit(),
+        KeyCode::KeyR => model.solver.reset(),
+        _ => {}
     }
 }
