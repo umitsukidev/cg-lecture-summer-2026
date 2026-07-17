@@ -265,6 +265,22 @@ impl Solver {
         v00 * x_a * y_a + v01 * x_a * y + v10 * x * y_a + v11 * x * y
     }
 
+    fn enforce_wall_pressure(&mut self) {
+        let prs = &mut self.prs;
+        for n in 0..X_N {
+            prs[[n, 0]] = prs[[n, 1]];
+            prs[[n, Y_N - 1]] = prs[[n, Y_N - 2]];
+        }
+        for m in 0..Y_N {
+            prs[[0, m]] = prs[[1, m]];
+            prs[[X_N - 1, m]] = prs[[X_N - 2, m]];
+        }
+        prs[[0, 0]] = (prs[[1, 0]] + prs[[0, 1]]) / 2.0;
+        prs[[0, Y_N - 1]] = (prs[[1, Y_N - 1]] + prs[[0, Y_N - 2]]) / 2.0;
+        prs[[X_N - 1, 0]] = (prs[[X_N - 2, 0]] + prs[[X_N - 1, 1]]) / 2.0;
+        prs[[X_N - 1, Y_N - 1]] = (prs[[X_N - 2, Y_N - 1]] + prs[[X_N - 1, Y_N - 2]]) / 2.0;
+    }
+
     pub fn get_pixel(&self, x: usize, y: usize) -> Rgba<u8> {
         let x = x * X_N / self.window_rect.w() as usize;
         let y = y * Y_N / self.window_rect.h() as usize;
