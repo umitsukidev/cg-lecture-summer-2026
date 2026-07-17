@@ -60,7 +60,7 @@ impl Solver {
         self.prev_mouse_pos = prev_mouse_pos.map(|it| it.to_screen_coords(self.window_rect));
 
         self.add_source_velocity();
-        // self.add_source_ink();
+        self.add_source_ink();
         // self.projection_velocity();
         // self.advection_velocity();
         // self.advection_ink();
@@ -98,7 +98,7 @@ impl Solver {
                     let j = j + 1;
 
                     let pct = 1.0
-                        - (pt2(i as f32, j as f32) - pt2(mx as f32, my as f32)).length()
+                        - pt2(i as f32, j as f32).distance(pt2(mx as f32, my as f32))
                             / self.src_rad as f32;
                     let pct = 0.0.max(pct);
 
@@ -116,8 +116,32 @@ impl Solver {
         }
     }
 
-    fn add_source_ink() {
-        todo!()
+    fn add_source_ink(&mut self) {
+        if !self.mouse_pressed {
+            return;
+        }
+
+        if let Some(mouse_pos) = self.mouse_pos {
+            let mut ink_inner = self.ink[self.ink_index.0].slice_mut(s![1..-1, 1..-1]);
+
+            let width = self.window_rect.w();
+            let height = self.window_rect.h();
+
+            let mx = mouse_pos.x * X_N as f32 / width;
+            let my = mouse_pos.y * Y_N as f32 / height;
+
+            Zip::indexed(&mut ink_inner).par_for_each(|(i, j), ink_val| {
+                let i = i + 1;
+                let j = j + 1;
+
+                let pct = 1.0
+                    - pt2(i as f32, j as f32).distance(pt2(mx as f32, my as f32))
+                        / self.src_rad as f32;
+                let pct = 0.0.max(pct);
+
+                *ink_val += pct;
+            });
+        }
     }
 
     fn projection_velocity() {
