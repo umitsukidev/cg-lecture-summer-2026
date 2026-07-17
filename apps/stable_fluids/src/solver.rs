@@ -157,6 +157,7 @@ impl Solver {
         let [v0, v1] = &mut self.v;
 
         let current_is_first = self.velocity_index.0 == 0;
+
         let (u_curr, u_prev) = if current_is_first {
             (u0, &*u1)
         } else {
