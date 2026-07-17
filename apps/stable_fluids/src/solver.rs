@@ -184,14 +184,8 @@ impl Solver {
                 let i = i + 1;
                 let j = j + 1;
 
-                let px = (i as f32) * H;
-                let py = (j as f32) * H;
-
-                let px = px - u_prev_val * self.dt;
-                let py = py - v_prev_val * self.dt;
-
-                let px = px / H;
-                let py = py / H;
+                let px = ((i as f32) * H - u_prev_val * self.dt) / H;
+                let py = ((j as f32) * H - v_prev_val * self.dt) / H;
 
                 let (i0, j0) = (
                     (px.floor()).clamp(1.0, X_N as f32 - 2.0) as usize,
