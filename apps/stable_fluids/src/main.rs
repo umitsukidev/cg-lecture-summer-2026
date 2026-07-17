@@ -9,7 +9,7 @@ use crate::{
 };
 use nannou::{
     image::{Rgba, RgbaImage},
-    prelude::*,
+    prelude::{bevy_render::view::window, *},
 };
 use rayon::prelude::*;
 
@@ -71,7 +71,6 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model) {
-    let window_rect = app.window_rect();
     let width = model.image_buffer.width();
     let _height = model.image_buffer.height();
     let mouse_pressed =
@@ -79,13 +78,9 @@ fn update(app: &App, model: &mut Model) {
     let mouse_pos = app.mouse();
 
     if model.is_simulation_running {
-        model.solver.update_solver(
-            mouse_pressed,
-            mouse_pos.to_screen_coords(window_rect),
-            model
-                .prev_mouse_pos
-                .map(|pos| pos.to_screen_coords(window_rect)),
-        );
+        model
+            .solver
+            .update_solver(mouse_pressed, mouse_pos, model.prev_mouse_pos);
     }
 
     model

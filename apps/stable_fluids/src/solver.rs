@@ -1,6 +1,8 @@
 use nannou::prelude::*;
 use ndarray::{Array2, Zip, s};
 
+use crate::nannou_utils::Point2Ext;
+
 pub const X_N: usize = 120;
 pub const Y_N: usize = 90;
 pub const H: f32 = 1.0 / (if X_N > Y_N { X_N } else { Y_N }) as f32;
@@ -21,6 +23,9 @@ pub struct Solver {
     pub velocity_index: (usize, usize),
     /// (current, prev)
     pub ink_index: (usize, usize),
+    mouse_pressed: bool,
+    mouse_pos: Option<Point2>,
+    prev_mouse_pos: Option<Point2>,
 }
 
 impl Solver {
@@ -38,6 +43,9 @@ impl Solver {
             ink: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             velocity_index: (0, 1),
             ink_index: (0, 1),
+            mouse_pressed: false,
+            mouse_pos: None,
+            prev_mouse_pos: None,
         }
     }
 
@@ -47,62 +55,65 @@ impl Solver {
         mouse_pos: Point2,
         prev_mouse_pos: Option<Point2>,
     ) {
-        self.add_source_velocity(mouse_pressed, mouse_pos, prev_mouse_pos);
+        self.mouse_pressed = mouse_pressed;
+        self.mouse_pos = Some(mouse_pos.to_screen_coords(self.window_rect));
+        self.prev_mouse_pos = prev_mouse_pos.map(|it| it.to_screen_coords(self.window_rect));
+
+        self.add_source_velocity();
         // self.add_source_ink();
         // self.projection_velocity();
         // self.advection_velocity();
         // self.advection_ink();
     }
 
-    fn add_source_velocity(
-        &mut self,
-        mouse_pressed: bool,
-        mouse_pos: Point2,
-        prev_mouse_pos: Option<Point2>,
-    ) {
+    fn add_source_velocity(&mut self) {
         let width = self.window_rect.w();
         let height = self.window_rect.h();
-        if !mouse_pressed {
+
+        if !self.mouse_pressed {
             return;
         }
-        let mut mouse_vel = if let Some(prev_mouse_pos) = prev_mouse_pos {
-            mouse_pos - prev_mouse_pos
-        } else {
-            vec2(0.0, 0.0)
-        };
 
-        mouse_vel *= self.src_vel_amp;
+        if let Some(mouse_pos) = self.mouse_pos {
+            let mut mouse_vel = if let Some(prev_mouse_pos) = self.prev_mouse_pos {
+                mouse_pos - prev_mouse_pos
+            } else {
+                vec2(0.0, 0.0)
+            };
 
-        let mx = mouse_pos.x * X_N as f32 / width;
-        let my = mouse_pos.y * Y_N as f32 / height;
+            mouse_vel *= self.src_vel_amp;
 
-        // 壁を取り除く
-        let mut u_inner = self.u[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
-        let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+            let mx = mouse_pos.x * X_N as f32 / width;
+            let my = mouse_pos.y * Y_N as f32 / height;
 
-        Zip::indexed(&mut u_inner)
-            .and(&mut v_inner)
-            .par_for_each(|(i, j), u_val, v_val| {
-                // 壁を取り除いたぶんのインデックスの調整
-                let i = i + 1;
-                let j = j + 1;
+            // 壁を取り除く
+            let mut u_inner = self.u[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+            let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
 
-                let pct = 1.0
-                    - (pt2(i as f32, j as f32) - pt2(mx as f32, my as f32)).length()
-                        / self.src_rad as f32;
-                let pct = 0.0.max(pct);
+            Zip::indexed(&mut u_inner)
+                .and(&mut v_inner)
+                .par_for_each(|(i, j), u_val, v_val| {
+                    // 壁を取り除いたぶんのインデックスの調整
+                    let i = i + 1;
+                    let j = j + 1;
 
-                let mut vel = mouse_vel * pct;
+                    let pct = 1.0
+                        - (pt2(i as f32, j as f32) - pt2(mx as f32, my as f32)).length()
+                            / self.src_rad as f32;
+                    let pct = 0.0.max(pct);
 
-                vel.x += *u_val;
-                vel.y += *v_val;
+                    let mut vel = mouse_vel * pct;
 
-                // 速さ制限
-                let vel = vel.clamp_length_max(5.0);
+                    vel.x += *u_val;
+                    vel.y += *v_val;
 
-                *u_val = vel.x;
-                *v_val = vel.y;
-            });
+                    // 速さ制限
+                    let vel = vel.clamp_length_max(5.0);
+
+                    *u_val = vel.x;
+                    *v_val = vel.y;
+                });
+        }
     }
 
     fn add_source_ink() {
