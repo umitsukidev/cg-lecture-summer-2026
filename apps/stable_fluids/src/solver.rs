@@ -122,6 +122,6 @@ impl Solver {
     }
 
     pub fn reset(&mut self) {
-        todo!()
+        *self = Self::new(self.window_rect);
     }
 }

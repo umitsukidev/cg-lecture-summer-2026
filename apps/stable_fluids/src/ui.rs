@@ -65,7 +65,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
             ui.style_mut().interaction.selectable_labels = false;
 
             egui::Frame::window(ui.style()).show(ui, |ui| {
-                ui.set_min_width(60.0);
+                ui.set_width(60.0);
                 ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
                     ui.label(egui::RichText::new(format!("fps: {:.0}", fps)).monospace());
                 });
@@ -74,6 +74,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
     egui::Window::new("設定")
         .resizable(false)
+        .max_width(150.0)
         .show(&egui, |ui| {
             let mut fonts = egui::FontDefinitions::default();
 
@@ -106,6 +107,8 @@ pub fn display_gui(app: &App, model: &mut Model) {
             ui.checkbox(&mut model.show_display_grids, "グリッドを表示");
             ui.checkbox(&mut model.show_display_velocity, "速度ベクトルを表示");
 
+            ui.separator();
+
             let src_vel_amp = ui.label("src_vel_amp");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_vel_amp, 0.0..=0.4)
@@ -131,5 +134,11 @@ pub fn display_gui(app: &App, model: &mut Model) {
                     .smart_aim(false),
             )
             .labelled_by(max_gs_iterate.id);
+
+            ui.separator();
+
+            if ui.button("リセット").clicked() {
+                model.solver.reset();
+            }
         });
 }
