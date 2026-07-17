@@ -137,6 +137,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             ui.separator();
 
+            ui.checkbox(&mut model.is_simulation_running, "シミュレーション");
             if ui.button("リセット").clicked() {
                 model.solver.reset();
             }
