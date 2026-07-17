@@ -3,14 +3,10 @@ mod solver;
 mod ui;
 
 use crate::{
-    nannou_utils::Point2Ext,
     solver::{Solver, X_N, Y_N},
     ui::{display_grids, display_gui, display_vector},
 };
-use nannou::{
-    image::{Rgba, RgbaImage},
-    prelude::{bevy_render::view::window, *},
-};
+use nannou::{image::RgbaImage, prelude::*};
 use rayon::prelude::*;
 
 pub struct Model {
@@ -90,10 +86,10 @@ fn update(app: &App, model: &mut Model) {
         .par_chunks_mut(4)
         .enumerate()
         .for_each(|(index, chunk)| {
-            let _x = (index as u32) % width;
-            let _y = (index as u32) / width;
+            let x = index % width as usize;
+            let y = index / width as usize;
 
-            let pixel = Rgba::from([0, 0, 0, 0]);
+            let pixel = model.solver.get_pixel(x, y);
 
             chunk[0] = pixel[0];
             chunk[1] = pixel[1];

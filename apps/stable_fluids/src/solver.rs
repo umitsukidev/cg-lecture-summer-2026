@@ -1,4 +1,4 @@
-use nannou::prelude::*;
+use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
 
 use crate::nannou_utils::Point2Ext;
@@ -130,6 +130,19 @@ impl Solver {
 
     fn advection_ink() {
         todo!()
+    }
+
+    pub fn get_pixel(&self, x: usize, y: usize) -> Rgba<u8> {
+        let x = x * X_N / self.window_rect.w() as usize;
+        let y = y * Y_N / self.window_rect.h() as usize;
+
+        if x == 0 || y == 0 || x == X_N - 1 || y == Y_N - 1 {
+            // 壁
+            Rgba::<u8>([60, 60, 150, 255])
+        } else {
+            let pixel = ((self.ink[self.ink_index.0][[x, y]] * 255.0) as u8).clamp(0, 255);
+            Rgba([pixel, pixel, pixel, 255])
+        }
     }
 
     pub fn reset(&mut self) {
