@@ -156,13 +156,14 @@ impl Solver {
         let [u0, u1] = &mut self.u;
         let [v0, v1] = &mut self.v;
 
-        let (u_curr, u_prev_full) = if self.velocity_index.0 == 0 {
+        let current_is_first = self.velocity_index.0 == 0;
+        let (u_curr, u_prev) = if current_is_first {
             (u0, &*u1)
         } else {
             (u1, &*u0)
         };
 
-        let (v_curr, v_prev_full) = if self.velocity_index.0 == 0 {
+        let (v_curr, v_prev) = if current_is_first {
             (v0, &*v1)
         } else {
             (v1, &*v0)
@@ -172,8 +173,8 @@ impl Solver {
         let mut u_inner = u_curr.slice_mut(s![1..-1, 1..-1]);
         let mut v_inner = v_curr.slice_mut(s![1..-1, 1..-1]);
 
-        let u_prev_inner = u_prev_full.slice(s![1..-1, 1..-1]);
-        let v_prev_inner = v_prev_full.slice(s![1..-1, 1..-1]);
+        let u_prev_inner = u_prev.slice(s![1..-1, 1..-1]);
+        let v_prev_inner = v_prev.slice(s![1..-1, 1..-1]);
 
         Zip::indexed(&mut u_inner)
             .and(&mut v_inner)
@@ -197,14 +198,14 @@ impl Solver {
                 let t = py - j0 as f32;
 
                 let u = (
-                    (u_prev_full[[i0, j0]], u_prev_full[[i0, j1]]),
-                    (u_prev_full[[i1, j0]], u_prev_full[[i1, j1]]),
+                    (u_prev[[i0, j0]], u_prev[[i0, j1]]),
+                    (u_prev[[i1, j0]], u_prev[[i1, j1]]),
                 );
                 let vx = Self::bilinear(s, t, u);
 
                 let v = (
-                    (v_prev_full[[i0, j0]], v_prev_full[[i0, j1]]),
-                    (v_prev_full[[i1, j0]], v_prev_full[[i1, j1]]),
+                    (v_prev[[i0, j0]], v_prev[[i0, j1]]),
+                    (v_prev[[i1, j0]], v_prev[[i1, j1]]),
                 );
                 let vy = Self::bilinear(s, t, v);
 
