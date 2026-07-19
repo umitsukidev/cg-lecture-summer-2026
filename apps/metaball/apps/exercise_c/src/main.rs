@@ -41,7 +41,7 @@ fn model(app: &App) -> Model {
     // 15x15平均化
     let mut new_image_buffer = nannou::image::RgbaImage::new(width, height);
     let filter_size = 15;
-    let half_size = (filter_size / 2) as i32;
+    let half_size = filter_size / 2;
     for x in 0..width {
         for y in 0..height {
             let mut r_sum = 0.0;

@@ -25,8 +25,8 @@ impl Material {
         Material::Refractive { reflection, ior }
     }
 
-    pub fn to_gpu(&self) -> GpuMaterial {
-        match *self {
+    pub fn to_gpu(self) -> GpuMaterial {
+        match self {
             Material::Diffuse { reflection } => GpuMaterial {
                 material_type: 0,
                 pad0: 0,

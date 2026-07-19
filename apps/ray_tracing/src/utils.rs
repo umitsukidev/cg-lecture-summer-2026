@@ -27,6 +27,7 @@ pub fn find_nearest_intersection<'a>(
     hit
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render(
     window_rect: Rect,
     x: u32,

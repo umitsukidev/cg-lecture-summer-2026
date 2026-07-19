@@ -58,18 +58,18 @@ fn model(app: &App) -> Model {
 
         while running_capture.load(Ordering::Relaxed) {
             let mut raw_frame = Mat::default();
-            if let Ok(true) = cam.read(&mut raw_frame) {
-                if raw_frame.size().map(|s| s.width > 0).unwrap_or(false) {
-                    let mut frame = opencv::core::Mat::default();
-                    if core::flip(&raw_frame, &mut frame, 1).is_ok() {
-                        let _ = face_cam_tx.try_send(frame.clone());
-                        let _ = flow_cam_tx.try_send(frame.clone());
+            if let Ok(true) = cam.read(&mut raw_frame)
+                && raw_frame.size().map(|s| s.width > 0).unwrap_or(false)
+            {
+                let mut frame = opencv::core::Mat::default();
+                if core::flip(&raw_frame, &mut frame, 1).is_ok() {
+                    let _ = face_cam_tx.try_send(frame.clone());
+                    let _ = flow_cam_tx.try_send(frame.clone());
 
-                        if let Ok(rgba_image) = frame.to_rgba_image() {
-                            if img_tx.send(rgba_image).is_err() {
-                                break;
-                            }
-                        }
+                    if let Ok(rgba_image) = frame.to_rgba_image()
+                        && img_tx.send(rgba_image).is_err()
+                    {
+                        break;
                     }
                 }
             }
@@ -95,10 +95,10 @@ fn model(app: &App) -> Model {
                 latest_frame = f;
             }
 
-            if let Ok(result) = detector.get_frontalface(&latest_frame) {
-                if faces_tx.send(result).is_err() {
-                    break;
-                }
+            if let Ok(result) = detector.get_frontalface(&latest_frame)
+                && faces_tx.send(result).is_err()
+            {
+                break;
             }
 
             let elapsed = start_time.elapsed();
@@ -126,10 +126,10 @@ fn model(app: &App) -> Model {
                 latest_frame = f;
             }
 
-            if let Ok(flow) = flow_calc.get_flow(&latest_frame) {
-                if flow_tx.send(flow).is_err() {
-                    break;
-                }
+            if let Ok(flow) = flow_calc.get_flow(&latest_frame)
+                && flow_tx.send(flow).is_err()
+            {
+                break;
             }
 
             let elapsed = start_time.elapsed();
@@ -232,8 +232,8 @@ fn update(app: &App, model: &mut Model) {
         model.flow = Some(res);
     }
 
-    if let Some(flow) = &model.flow {
-        if let Ok(ball_flow) = {
+    if let Some(flow) = &model.flow
+        && let Ok(ball_flow) = {
             let ball_position = model.ball.position.to_screen_coords(&app.window_rect());
             OpticalFlow::get_average_flow_in_region(
                 flow,
@@ -242,10 +242,10 @@ fn update(app: &App, model: &mut Model) {
                     vec2(2.0 * model.ball.radius, 2.0 * model.ball.radius),
                 ),
             )
-        } {
-            model.ball.position += ball_flow;
-        };
-    }
+        }
+    {
+        model.ball.position += ball_flow;
+    };
     // let frame_count = app.elapsed_frames();
     // if frame_count % 4 == 0 {
     //     let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));

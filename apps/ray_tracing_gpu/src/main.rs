@@ -255,12 +255,12 @@ fn update(app: &App, model: &mut Model) {
 
     let window = app.window(model._window_id);
     if frame_count < SAMPLES {
-        window.set_title(&format!(
+        window.set_title(format!(
             "ray_tracing_gpu [{} / {} samples]",
             frame_count, SAMPLES
         ));
     } else if frame_count == SAMPLES {
-        window.set_title(&format!(
+        window.set_title(format!(
             "ray_tracing_gpu [Completed in {:.2?} ({} samples)]",
             model.start_time.elapsed(),
             SAMPLES
@@ -295,8 +295,8 @@ fn render(_app: &RenderApp, model: &Model, frame: Frame) {
         compute_pass.set_pipeline(&model.compute_pipeline);
         compute_pass.set_bind_group(0, &*model.compute_bind_group, &[]);
         // Grid size: WIDTH x HEIGHT. Workgroup size: 16x16.
-        let dispatch_x = (WIDTH + 15) / 16;
-        let dispatch_y = (HEIGHT + 15) / 16;
+        let dispatch_x = WIDTH.div_ceil(16);
+        let dispatch_y = HEIGHT.div_ceil(16);
         compute_pass.dispatch_workgroups(dispatch_x, dispatch_y, 1);
     }
 

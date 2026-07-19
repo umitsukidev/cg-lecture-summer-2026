@@ -3,6 +3,7 @@ adaboost
 AVFOUNDATION
 BGRA
 bytemuck
+clippy
 DYLD
 egui
 epaint
@@ -27,6 +28,7 @@ nannou
 ndarray
 Noto
 objdetect
+peekable
 Rainer
 rgba
 rustflags

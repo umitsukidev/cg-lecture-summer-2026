@@ -51,7 +51,7 @@ fn model(app: &App) -> Model {
 
 fn update(app: &App, model: &mut Model) {
     let w_h = app.window(model.window).size_pixels();
-    let (width, height) = (w_h.x as u32, w_h.y as u32);
+    let (width, height) = (w_h.x, w_h.y);
 
     let mut image_buffer = RgbaImage::from_pixel(width, height, Rgba([0, 0, 0, 255]));
 
@@ -111,17 +111,14 @@ fn view(app: &App, model: &Model) {
 
 fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
     let w_h = app.window(model.window).size_pixels();
-    let (width, height) = (w_h.x as u32, w_h.y as u32);
-    match button {
-        MouseButton::Left => {
-            let field_size = pt2(width as f32, height as f32);
-            model.metaballs.push(Metaball::new(
-                app.mouse(),
-                rand::random_range(10.0, 50.0),
-                field_size,
-            ));
-        }
-        _ => {}
+    let (width, height) = (w_h.x, w_h.y);
+    if button == MouseButton::Left {
+        let field_size = pt2(width as f32, height as f32);
+        model.metaballs.push(Metaball::new(
+            app.mouse(),
+            rand::random_range(10.0, 50.0),
+            field_size,
+        ));
     }
 }
 
@@ -129,7 +126,7 @@ fn quantize_n_levels(value: u8, n: u8) -> u8 {
     if n < 2 {
         return 0;
     }
-    if n >= 255 {
+    if n == 255 {
         return value;
     }
     let step = 255.0 / (n - 1) as f32;

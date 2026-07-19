@@ -16,8 +16,8 @@ pub struct Solver {
     pub src_ink_amp: f32,
     pub u: [Array2<f32>; 2],
     pub v: [Array2<f32>; 2],
-    pub div: Array2<f32>,
-    pub prs: Array2<f32>,
+    pub _div: Array2<f32>,
+    pub _prs: Array2<f32>,
     pub ink: [Array2<f32>; 2],
     /// (current, prev)
     pub velocity_index: (usize, usize),
@@ -39,8 +39,8 @@ impl Solver {
             src_ink_amp: 0.1,
             u: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
-            div: Array2::zeros((X_N, Y_N)),
-            prs: Array2::zeros((X_N, Y_N)),
+            _div: Array2::zeros((X_N, Y_N)),
+            _prs: Array2::zeros((X_N, Y_N)),
             ink: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             velocity_index: (0, 1),
             ink_index: (0, 1),
@@ -88,7 +88,9 @@ impl Solver {
             let my = mouse_pos.y * Y_N as f32 / height;
 
             // 壁を取り除く
+            #[allow(clippy::reversed_empty_ranges)]
             let mut u_inner = self.u[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+            #[allow(clippy::reversed_empty_ranges)]
             let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
 
             Zip::indexed(&mut u_inner)
@@ -100,8 +102,7 @@ impl Solver {
 
                     // 0.5を足してグリッドの中心に補正
                     let pct = 1.0
-                        - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx as f32, my as f32))
-                            / self.src_rad as f32;
+                        - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx, my)) / self.src_rad;
                     let pct = f32::max(pct, 0.0);
 
                     let mut vel = mouse_vel * pct;
@@ -124,6 +125,7 @@ impl Solver {
         }
 
         if let Some(mouse_pos) = self.mouse_pos {
+            #[allow(clippy::reversed_empty_ranges)]
             let mut ink_inner = self.ink[self.ink_index.0].slice_mut(s![1..-1, 1..-1]);
 
             let width = self.window_rect.w();
@@ -137,9 +139,8 @@ impl Solver {
                 let j = j + 1;
 
                 // 0.5を足してグリッドの中心に補正
-                let pct = 1.0
-                    - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx as f32, my as f32))
-                        / self.src_rad as f32;
+                let pct =
+                    1.0 - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx, my)) / self.src_rad;
                 let pct = f32::max(pct, 0.0) * self.src_ink_amp;
 
                 *ink_val += pct;
@@ -147,18 +148,19 @@ impl Solver {
         }
     }
 
-    fn projection_velocity(&mut self) {
+    fn _projection_velocity(&mut self) {
         // ---------------------------
         // 1. 反復計算前の事前計算
         // ---------------------------
 
         // 壁を取り除く
-        let mut div_inner = self.div.slice_mut(s![1..-1, 1..-1]);
+        #[allow(clippy::reversed_empty_ranges)]
+        let mut div_inner = self._div.slice_mut(s![1..-1, 1..-1]);
 
-        Zip::indexed(&mut div_inner).par_for_each(|(i, j), div_val| {
+        Zip::indexed(&mut div_inner).par_for_each(|(i, j), _div_val| {
             // 壁を取り除いたぶんのインデックスの修正
-            let i = i + 1;
-            let j = j + 1;
+            let _i = i + 1;
+            let _j = j + 1;
         });
 
         // ---------------------------
@@ -167,19 +169,21 @@ impl Solver {
         let tolerance = 0.001;
         for _ in 0..self.max_gs_iterate {
             let mut err = 0.0;
-            let mut prs_inner = self.prs.slice_mut(s![1..-1, 1..-1]);
+
+            #[allow(clippy::reversed_empty_ranges)]
+            let mut prs_inner = self._prs.slice_mut(s![1..-1, 1..-1]);
 
             Zip::indexed(&mut prs_inner).for_each(|(i, j), prs_val| {
                 // 壁を取り除いたぶんのインデックスの修正
-                let i = i + 1;
-                let j = j + 1;
+                let _i = i + 1;
+                let _j = j + 1;
 
                 let prev_prs_val = *prs_val;
 
                 err = f32::max((prev_prs_val - *prs_val).abs(), err);
             });
 
-            self.enforce_wall_pressure();
+            self._enforce_wall_pressure();
 
             // 収束判定
             if err < tolerance {
@@ -190,15 +194,17 @@ impl Solver {
         // ---------------------------
         // 3. 圧力勾配を求めて速度を更新
         // ---------------------------
+        #[allow(clippy::reversed_empty_ranges)]
         let mut u_inner = self.u[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+        #[allow(clippy::reversed_empty_ranges)]
         let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
 
         Zip::indexed(&mut u_inner)
             .and(&mut v_inner)
-            .par_for_each(|(i, j), u_val, v_val| {
+            .par_for_each(|(i, j), _u_val, _v_val| {
                 // 壁を取り除いたぶんのインデックスの調整
-                let i = i + 1;
-                let j = j + 1;
+                let _i = i + 1;
+                let _j = j + 1;
             });
     }
 
@@ -223,7 +229,9 @@ impl Solver {
         };
 
         // 壁を取り除く
+        #[allow(clippy::reversed_empty_ranges)]
         let mut u_inner = u_curr.slice_mut(s![1..-1, 1..-1]);
+        #[allow(clippy::reversed_empty_ranges)]
         let mut v_inner = v_curr.slice_mut(s![1..-1, 1..-1]);
 
         Zip::indexed(&mut u_inner)
@@ -276,6 +284,7 @@ impl Solver {
         };
 
         // 壁を取り除く
+        #[allow(clippy::reversed_empty_ranges)]
         let mut ink_inner = ink_curr.slice_mut(s![1..-1, 1..-1]);
 
         Zip::indexed(&mut ink_inner).par_for_each(|(i, j), ink_val| {
@@ -315,8 +324,8 @@ impl Solver {
         v00 * x_a * y_a + v01 * x_a * y + v10 * x * y_a + v11 * x * y
     }
 
-    fn enforce_wall_pressure(&mut self) {
-        let prs = &mut self.prs;
+    fn _enforce_wall_pressure(&mut self) {
+        let prs = &mut self._prs;
         for n in 0..X_N {
             prs[[n, 0]] = prs[[n, 1]];
             prs[[n, Y_N - 1]] = prs[[n, Y_N - 2]];

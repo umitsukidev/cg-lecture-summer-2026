@@ -166,11 +166,10 @@ fn render(_app: &RenderApp, model: &Model, frame: Frame) {
 }
 
 fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
-    match button {
-        MouseButton::Left => model.balls.push(Ball {
+    if button == MouseButton::Left {
+        model.balls.push(Ball {
             position: app.mouse(),
             radius: 50.0,
-        }),
-        _ => {}
+        })
     }
 }

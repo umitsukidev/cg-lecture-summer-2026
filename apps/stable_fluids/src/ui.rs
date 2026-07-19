@@ -11,8 +11,8 @@ use nannou::prelude::{
     *,
 };
 use ndarray::ArrayView2;
-use std::sync::{Arc, Mutex};
 use rayon::prelude::*;
+use std::sync::{Arc, Mutex};
 
 pub fn update_vector_mesh(
     vector_mesh: &mut [geom::Tri<(Point3, Color)>],
@@ -73,10 +73,7 @@ pub fn update_vector_mesh(
         });
 }
 
-pub fn display_vector(
-    draw: &Draw,
-    vector_mesh: &Mutex<Vec<geom::Tri<(Point3, Color)>>>,
-) {
+pub fn display_vector(draw: &Draw, vector_mesh: &Mutex<Vec<geom::Tri<(Point3, Color)>>>) {
     let mut mesh_guard = vector_mesh.lock().unwrap();
     let mut tris = mesh_guard
         .drain(..)

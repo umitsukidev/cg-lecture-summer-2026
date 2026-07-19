@@ -69,9 +69,9 @@ fn update(app: &App, model: &mut Model) {
 
     let window = app.window(model.window_id);
     if count < SAMPLES {
-        window.set_title(&format!("ray_tracing [{} / {} samples]", count, SAMPLES));
+        window.set_title(format!("ray_tracing [{} / {} samples]", count, SAMPLES));
     } else if count == SAMPLES {
-        window.set_title(&format!(
+        window.set_title(format!(
             "ray_tracing [Completed in {:.2?} ({} samples)]",
             model.start_time.elapsed(),
             SAMPLES

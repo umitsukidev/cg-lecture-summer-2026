@@ -9,7 +9,7 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn to_gpu(&self) -> GpuSphere {
+    pub fn to_gpu(self) -> GpuSphere {
         GpuSphere {
             position: self.position.into(),
             radius: self.radius,
