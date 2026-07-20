@@ -1,9 +1,9 @@
-use crate::nannou_utils::Point2Ext;
+use crate::nannou_utils::{ColorExt, Point2Ext};
 use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
 
-pub const X_N: usize = 120;
-pub const Y_N: usize = 90;
+pub const X_N: usize = 240;
+pub const Y_N: usize = 180;
 pub const H: f32 = 1.0 / (if X_N > Y_N { X_N } else { Y_N }) as f32;
 
 #[derive(Debug, Clone)]
@@ -34,7 +34,7 @@ impl Solver {
             window_rect,
             dt: 1.0 / 60.0,
             max_gs_iterate: 50,
-            src_rad: 4.0,
+            src_rad: 8.0,
             src_vel_amp: 0.1,
             src_ink_amp: 0.1,
             u: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
@@ -371,8 +371,13 @@ impl Solver {
             // 壁
             Rgba::<u8>([60, 60, 150, 255])
         } else {
-            let pixel = ((self.ink[self.ink_index.0][[x, y]] * 255.0) as u8).clamp(0, 255);
-            Rgba([pixel, pixel, pixel, 255])
+            let pixel = self.ink[self.ink_index.0][[x, y]].clamp(0.0, 1.0);
+
+            Rgba(
+                Color::cmyk(pixel, pixel, pixel, pixel)
+                    .to_srgba()
+                    .to_u8_array(),
+            )
         }
     }
 

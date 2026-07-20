@@ -38,7 +38,7 @@ pub fn update_vector_mesh(
                 (i as f32 + 0.5) * width / X_N as f32,
                 (j as f32 + 0.5) * height / Y_N as f32,
             );
-            let vel = vec2(val_u, val_v) * l * 4.1;
+            let vel = vec2(val_u, val_v) * l * 10.0;
             let to = from + vel;
 
             if vel.length() > 1e-5 {
@@ -177,7 +177,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             let src_rad = ui.label("src_rad");
             ui.add(
-                egui::Slider::new(&mut model.solver.src_rad, 0.01..=10.0)
+                egui::Slider::new(&mut model.solver.src_rad, 0.01..=20.0)
                     .step_by(0.01)
                     .smart_aim(false)
                     .fixed_decimals(2),

@@ -19,3 +19,18 @@ impl Point2Ext for Point2 {
         pt2(x, y)
     }
 }
+
+#[allow(dead_code)]
+pub trait ColorExt {
+    fn cmyk(cyan: f32, magenta: f32, yellow: f32, black: f32) -> Color;
+}
+
+impl ColorExt for Color {
+    fn cmyk(cyan: f32, magenta: f32, yellow: f32, black: f32) -> Color {
+        let red = (1.0 - cyan) * (1.0 - black);
+        let green = (1.0 - magenta) * (1.0 - black);
+        let blue = (1.0 - yellow) * (1.0 - black);
+
+        Color::srgb(red, green, blue)
+    }
+}
