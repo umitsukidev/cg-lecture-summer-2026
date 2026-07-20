@@ -159,7 +159,6 @@ impl Solver {
 
         let u = &self.u[self.velocity_index.0];
         let v = &self.v[self.velocity_index.0];
-        let ink = &self.ink[self.ink_index.0];
 
         Zip::indexed(&mut div_inner).par_for_each(|(i, j), div_val| {
             // 壁を取り除いたぶんのインデックスの修正
@@ -169,7 +168,7 @@ impl Solver {
             let div_u =
                 ((u[[i + 1, j]] - u[[i - 1, j]]) + (v[[i, j + 1]] - v[[i, j - 1]])) / (2.0 * H);
 
-            *div_val = (-(ink[[i, j]] * H.powi(2)) / self.dt) * div_u;
+            *div_val = -(H.powi(2) / self.dt) * div_u;
         });
 
         // ---------------------------
