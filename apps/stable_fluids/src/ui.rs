@@ -152,6 +152,10 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             ui.style_mut().interaction.selectable_labels = false;
 
+            ui.label("Press F3 to hide GUI");
+
+            ui.separator();
+
             ui.checkbox(&mut model.show_display_grids, "グリッドを表示");
             ui.checkbox(&mut model.show_display_velocity, "速度ベクトルを表示");
 

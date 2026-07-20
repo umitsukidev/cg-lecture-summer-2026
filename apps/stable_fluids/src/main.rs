@@ -20,6 +20,7 @@ pub struct Model {
     is_simulation_running: bool,
     show_display_grids: bool,
     show_display_velocity: bool,
+    show_gui: bool,
     prev_mouse_pos: Option<Point2>,
     solver: Solver,
     displayed_fps: f32,
@@ -79,6 +80,7 @@ fn model(app: &App) -> Model {
         is_simulation_running: true,
         show_display_grids: false,
         show_display_velocity: false,
+        show_gui: true,
         prev_mouse_pos: None,
         solver,
         displayed_fps: 0.0,
@@ -169,7 +171,9 @@ fn update(app: &App, model: &mut Model) {
         update_vector_mesh(&mut mesh_guard, u, v, window_rect);
     }
 
-    display_gui(app, model);
+    if model.show_gui {
+        display_gui(app, model);
+    }
 }
 
 fn view(app: &App, model: &Model) {
@@ -194,6 +198,8 @@ fn key_pressed(app: &App, model: &mut Model, key: KeyCode) {
     match key {
         KeyCode::Escape => app.quit(),
         KeyCode::KeyR => model.solver.reset(),
+        KeyCode::Space => model.is_simulation_running = !model.is_simulation_running,
+        KeyCode::F3 => model.show_gui = !model.show_gui,
         _ => {}
     }
 }
