@@ -157,7 +157,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             ui.separator();
 
-            let src_vel_amp_label = ui.label("src_vel_amp");
+            let src_vel_amp_label = ui.label("インクの勢い");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_vel_amp, 0.0..=0.4)
                     .step_by(0.01)
@@ -166,7 +166,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
             )
             .labelled_by(src_vel_amp_label.id);
 
-            let src_ink_amp_label = ui.label("src_ink_amp");
+            let src_ink_amp_label = ui.label("インク量");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_ink_amp, 0.0..=0.4)
                     .step_by(0.01)
@@ -175,7 +175,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
             )
             .labelled_by(src_ink_amp_label.id);
 
-            let src_rad_label = ui.label("src_rad");
+            let src_rad_label = ui.label("インクの注入半径");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_rad, 0.01..=20.0)
                     .step_by(0.01)
@@ -184,7 +184,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
             )
             .labelled_by(src_rad_label.id);
 
-            let max_gs_iterate_label = ui.label("max_gs_iterate");
+            let max_gs_iterate_label = ui.label("圧力反復計算の最大回数");
             ui.add(
                 egui::Slider::new(&mut model.solver.max_gs_iterate, 1..=20000)
                     .step_by(1.0)
@@ -210,13 +210,13 @@ pub fn display_gui(app: &App, model: &mut Model) {
             ui.group(|ui| {
                 ui.color_edit_button_srgb(&mut ink_color);
 
-                let red_label = ui.label("RED");
+                let red_label = ui.label("Red");
                 ui.add(egui::Slider::new(&mut ink_color[0], 0..=255))
                     .labelled_by(red_label.id);
-                let green_label = ui.label("GREEN");
+                let green_label = ui.label("Green");
                 ui.add(egui::Slider::new(&mut ink_color[1], 0..=255))
                     .labelled_by(green_label.id);
-                let blue_label = ui.label("BLUE");
+                let blue_label = ui.label("Blue");
                 ui.add(egui::Slider::new(&mut ink_color[2], 0..=255))
                     .labelled_by(blue_label.id);
             })
