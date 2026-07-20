@@ -378,8 +378,7 @@ impl Solver {
             // 壁
             Rgba::<u8>([255, 255, 255, 255])
         } else {
-            let [c, m, y, k] =
-                self.ink[self.ink_index.0][[x, y]].map(|value| value.clamp(0.0, 1.0));
+            let [c, m, y, k] = self.ink[self.ink_index.0][[x, y]].map(|value| 1.0 - (-value).exp());
 
             Rgba(Color::cmyk(c, m, y, k).to_srgba().to_u8_array())
         }
