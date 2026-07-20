@@ -1,4 +1,7 @@
-use crate::nannou_utils::{ColorExt, Point2Ext};
+use crate::{
+    cmyk::Cmyk,
+    nannou_utils::{ColorExt, Point2Ext},
+};
 use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
 
@@ -18,8 +21,8 @@ pub struct Solver {
     pub v: [Array2<f32>; 2],
     pub div: Array2<f32>,
     pub prs: Array2<f32>,
-    pub ink: [Array2<[f32; 4]>; 2],
-    pub ink_color: [f32; 4],
+    pub ink: [Array2<Cmyk>; 2],
+    pub ink_color: Cmyk,
     /// (current, prev)
     pub velocity_index: (usize, usize),
     /// (current, prev)
@@ -42,8 +45,8 @@ impl Solver {
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             div: Array2::zeros((X_N, Y_N)),
             prs: Array2::zeros((X_N, Y_N)),
-            ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), [0.0; 4])),
-            ink_color: [0.8, 0.2, 0.2, 0.5],
+            ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), Cmyk::default())),
+            ink_color: Cmyk::new(0.8, 0.2, 0.2, 0.5),
             velocity_index: (0, 1),
             ink_index: (0, 1),
             mouse_pressed: false,
@@ -145,7 +148,7 @@ impl Solver {
                     1.0 - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx, my)) / self.src_rad;
                 let pct = f32::max(pct, 0.0) * self.src_ink_amp;
 
-                for (ink_channel, color) in ink_val.iter_mut().zip(self.ink_color) {
+                for (ink_channel, color) in ink_val.iter_mut().zip(self.ink_color.iter()) {
                     *ink_channel += pct * color;
                 }
             });

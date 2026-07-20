@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+derive_more.workspace = true
 nannou = { workspace = true, features = ["egui"] }
 ndarray = { workspace = true, features = ["rayon"] }
 rayon.workspace = true

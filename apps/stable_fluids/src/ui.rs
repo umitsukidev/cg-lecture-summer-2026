@@ -203,9 +203,10 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             let ink_color_label = ui.label("インクの色");
             let ink_color = model.solver.ink_color;
-            let mut ink_color = Color::cmyk(ink_color[0], ink_color[1], ink_color[2], ink_color[3])
-                .to_srgba()
-                .to_u8_array_no_alpha();
+            let mut ink_color =
+                Color::cmyk(ink_color.c(), ink_color.m(), ink_color.y(), ink_color.k())
+                    .to_srgba()
+                    .to_u8_array_no_alpha();
             ui.group(|ui| {
                 ui.color_edit_button_srgb(&mut ink_color);
 
@@ -222,6 +223,6 @@ pub fn display_gui(app: &App, model: &mut Model) {
             .response
             .labelled_by(ink_color_label.id);
             model.solver.ink_color =
-                Color::srgb_u8(ink_color[0], ink_color[1], ink_color[2]).to_cmyk_f32_array();
+                Color::srgb_u8(ink_color[0], ink_color[1], ink_color[2]).to_cmyk();
         });
 }

@@ -1,3 +1,4 @@
+mod cmyk;
 mod nannou_utils;
 mod solver;
 mod ui;

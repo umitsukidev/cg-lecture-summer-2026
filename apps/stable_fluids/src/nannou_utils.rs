@@ -1,5 +1,7 @@
 use nannou::prelude::*;
 
+use crate::cmyk::Cmyk;
+
 #[allow(dead_code)]
 pub trait Point2Ext {
     fn to_screen_coords(self, window_rect: Rect) -> Point2;
@@ -23,7 +25,7 @@ impl Point2Ext for Point2 {
 #[allow(dead_code)]
 pub trait ColorExt {
     fn cmyk(cyan: f32, magenta: f32, yellow: f32, black: f32) -> Color;
-    fn to_cmyk_f32_array(self) -> [f32; 4];
+    fn to_cmyk(self) -> Cmyk;
 }
 
 impl ColorExt for Color {
@@ -35,7 +37,7 @@ impl ColorExt for Color {
         Color::srgb(red, green, blue)
     }
 
-    fn to_cmyk_f32_array(self) -> [f32; 4] {
+    fn to_cmyk(self) -> Cmyk {
         let [red, green, blue] = self.to_srgba().to_f32_array_no_alpha();
 
         let max_rgb = [red, green, blue]
@@ -54,6 +56,6 @@ impl ColorExt for Color {
             )
         };
 
-        [cyan, magenta, yellow, black]
+        Cmyk::new(cyan, magenta, yellow, black)
     }
 }
