@@ -16,8 +16,8 @@ pub struct Solver {
     pub src_ink_amp: f32,
     pub u: [Array2<f32>; 2],
     pub v: [Array2<f32>; 2],
-    pub _div: Array2<f32>,
-    pub _prs: Array2<f32>,
+    pub div: Array2<f32>,
+    pub prs: Array2<f32>,
     pub ink: [Array2<f32>; 2],
     /// (current, prev)
     pub velocity_index: (usize, usize),
@@ -39,8 +39,8 @@ impl Solver {
             src_ink_amp: 0.1,
             u: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
-            _div: Array2::zeros((X_N, Y_N)),
-            _prs: Array2::zeros((X_N, Y_N)),
+            div: Array2::zeros((X_N, Y_N)),
+            prs: Array2::zeros((X_N, Y_N)),
             ink: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             velocity_index: (0, 1),
             ink_index: (0, 1),
@@ -62,7 +62,7 @@ impl Solver {
 
         self.add_source_velocity();
         self.add_source_ink();
-        // self.projection_velocity();
+        self.projection_velocity();
         self.advection_velocity();
         self.advection_ink();
     }
@@ -148,19 +148,28 @@ impl Solver {
         }
     }
 
-    fn _projection_velocity(&mut self) {
+    fn projection_velocity(&mut self) {
         // ---------------------------
         // 1. 反復計算前の事前計算
         // ---------------------------
 
         // 壁を取り除く
         #[allow(clippy::reversed_empty_ranges)]
-        let mut div_inner = self._div.slice_mut(s![1..-1, 1..-1]);
+        let mut div_inner = self.div.slice_mut(s![1..-1, 1..-1]);
 
-        Zip::indexed(&mut div_inner).par_for_each(|(i, j), _div_val| {
+        let u = &self.u[self.velocity_index.0];
+        let v = &self.v[self.velocity_index.0];
+        let ink = &self.ink[self.ink_index.0];
+
+        Zip::indexed(&mut div_inner).par_for_each(|(i, j), div_val| {
             // 壁を取り除いたぶんのインデックスの修正
-            let _i = i + 1;
-            let _j = j + 1;
+            let i = i + 1;
+            let j = j + 1;
+
+            let div_u =
+                ((u[[i + 1, j]] - u[[i - 1, j]]) + (v[[i, j + 1]] - v[[i, j - 1]])) / (2.0 * H);
+
+            *div_val = (-(ink[[i, j]] * H.powi(2)) / self.dt) * div_u;
         });
 
         // ---------------------------
@@ -170,20 +179,27 @@ impl Solver {
         for _ in 0..self.max_gs_iterate {
             let mut err = 0.0;
 
-            #[allow(clippy::reversed_empty_ranges)]
-            let mut prs_inner = self._prs.slice_mut(s![1..-1, 1..-1]);
+            let prs = &mut self.prs;
+            let div = &self.div;
 
-            Zip::indexed(&mut prs_inner).for_each(|(i, j), prs_val| {
-                // 壁を取り除いたぶんのインデックスの修正
-                let _i = i + 1;
-                let _j = j + 1;
+            for i in 1..(X_N - 1) {
+                for j in 1..(Y_N - 1) {
+                    let prev_prs_val = prs[[i, j]];
 
-                let prev_prs_val = *prs_val;
+                    let prs_val = (prs[[i + 1, j]]
+                        + prs[[i - 1, j]]
+                        + prs[[i, j + 1]]
+                        + prs[[i, j - 1]]
+                        + div[[i, j]])
+                        / 4.0;
 
-                err = f32::max((prev_prs_val - *prs_val).abs(), err);
-            });
+                    prs[[i, j]] = prs_val;
 
-            self._enforce_wall_pressure();
+                    err = f32::max((prev_prs_val - prs_val).abs(), err);
+                }
+            }
+
+            self.enforce_wall_pressure();
 
             // 収束判定
             if err < tolerance {
@@ -199,12 +215,20 @@ impl Solver {
         #[allow(clippy::reversed_empty_ranges)]
         let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
 
+        let prs = &self.prs;
+
         Zip::indexed(&mut u_inner)
             .and(&mut v_inner)
-            .par_for_each(|(i, j), _u_val, _v_val| {
+            .par_for_each(|(i, j), u_val, v_val| {
                 // 壁を取り除いたぶんのインデックスの調整
-                let _i = i + 1;
-                let _j = j + 1;
+                let i = i + 1;
+                let j = j + 1;
+
+                let grad_prs_x = (prs[[i + 1, j]] - prs[[i - 1, j]]) / (H * 2.0);
+                let grad_prs_y = (prs[[i, j + 1]] - prs[[i, j - 1]]) / (H * 2.0);
+
+                *u_val += -self.dt * grad_prs_x;
+                *v_val += -self.dt * grad_prs_y;
             });
     }
 
@@ -324,8 +348,8 @@ impl Solver {
         v00 * x_a * y_a + v01 * x_a * y + v10 * x * y_a + v11 * x * y
     }
 
-    fn _enforce_wall_pressure(&mut self) {
-        let prs = &mut self._prs;
+    fn enforce_wall_pressure(&mut self) {
+        let prs = &mut self.prs;
         for n in 0..X_N {
             prs[[n, 0]] = prs[[n, 1]];
             prs[[n, Y_N - 1]] = prs[[n, Y_N - 2]];
