@@ -122,7 +122,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
     egui::Window::new("設定")
         .resizable(false)
-        .max_width(150.0)
+        .max_width(160.0)
         .show(&egui, |ui| {
             let mut fonts = egui::FontDefinitions::default();
 
@@ -206,8 +206,21 @@ pub fn display_gui(app: &App, model: &mut Model) {
             let mut ink_color = Color::cmyk(ink_color[0], ink_color[1], ink_color[2], ink_color[3])
                 .to_srgba()
                 .to_u8_array_no_alpha();
-            ui.color_edit_button_srgb(&mut ink_color)
-                .labelled_by(ink_color_label.id);
+            ui.group(|ui| {
+                ui.color_edit_button_srgb(&mut ink_color);
+
+                let red_label = ui.label("RED");
+                ui.add(egui::Slider::new(&mut ink_color[0], 0..=255))
+                    .labelled_by(red_label.id);
+                let green_label = ui.label("GREEN");
+                ui.add(egui::Slider::new(&mut ink_color[1], 0..=255))
+                    .labelled_by(green_label.id);
+                let blue_label = ui.label("BLUE");
+                ui.add(egui::Slider::new(&mut ink_color[2], 0..=255))
+                    .labelled_by(blue_label.id);
+            })
+            .response
+            .labelled_by(ink_color_label.id);
             model.solver.ink_color =
                 Color::srgb_u8(ink_color[0], ink_color[1], ink_color[2]).to_cmyk_f32_array();
         });

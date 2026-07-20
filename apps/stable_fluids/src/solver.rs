@@ -376,7 +376,7 @@ impl Solver {
 
         if x == 0 || y == 0 || x == X_N - 1 || y == Y_N - 1 {
             // 壁
-            Rgba::<u8>([60, 60, 150, 255])
+            Rgba::<u8>([255, 255, 255, 255])
         } else {
             let [c, m, y, k] =
                 self.ink[self.ink_index.0][[x, y]].map(|value| value.clamp(0.0, 1.0));
