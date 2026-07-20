@@ -103,49 +103,49 @@ fn update(app: &App, model: &mut Model) {
         model
             .solver
             .update_solver(mouse_pressed, mouse_pos, model.prev_mouse_pos);
-    }
 
-    let raw_pixels = {
-        let mut pixels = model
-            .pixel_rx
-            .lock()
-            .unwrap()
-            .try_recv()
-            .unwrap_or_else(|_| vec![0; (width * height * 4) as usize]);
-        let expected_size = (width * height * 4) as usize;
-        if pixels.len() != expected_size {
-            pixels.resize(expected_size, 0);
-        }
-        pixels
-    };
+        let raw_pixels = {
+            let mut pixels = model
+                .pixel_rx
+                .lock()
+                .unwrap()
+                .try_recv()
+                .unwrap_or_else(|_| vec![0; (width * height * 4) as usize]);
+            let expected_size = (width * height * 4) as usize;
+            if pixels.len() != expected_size {
+                pixels.resize(expected_size, 0);
+            }
+            pixels
+        };
 
-    let mut image_buffer = RgbaImage::from_raw(width, height, raw_pixels).unwrap();
+        let mut image_buffer = RgbaImage::from_raw(width, height, raw_pixels).unwrap();
 
-    image_buffer
-        .as_flat_samples_mut()
-        .samples
-        .par_chunks_mut(4)
-        .enumerate()
-        .for_each(|(index, chunk)| {
-            let x = index % width as usize;
-            let y = index / width as usize;
+        image_buffer
+            .as_flat_samples_mut()
+            .samples
+            .par_chunks_mut(4)
+            .enumerate()
+            .for_each(|(index, chunk)| {
+                let x = index % width as usize;
+                let y = index / width as usize;
 
-            let pixel = model.solver.get_pixel(x, y);
+                let pixel = model.solver.get_pixel(x, y);
 
-            chunk[0] = pixel[0];
-            chunk[1] = pixel[1];
-            chunk[2] = pixel[2];
-            chunk[3] = pixel[3];
+                chunk[0] = pixel[0];
+                chunk[1] = pixel[1];
+                chunk[2] = pixel[2];
+                chunk[3] = pixel[3];
+            });
+
+        let pixels = image_buffer.into_raw();
+        let tx = model.pixel_tx.clone();
+        app.modify_image(&model.texture, move |image| {
+            if let Some(old_pixels) = image.data.take() {
+                let _ = tx.send(old_pixels);
+            }
+            image.data = Some(pixels);
         });
-
-    let pixels = image_buffer.into_raw();
-    let tx = model.pixel_tx.clone();
-    app.modify_image(&model.texture, move |image| {
-        if let Some(old_pixels) = image.data.take() {
-            let _ = tx.send(old_pixels);
-        }
-        image.data = Some(pixels);
-    });
+    }
 
     model.prev_mouse_pos = if mouse_pressed { Some(mouse_pos) } else { None };
 
