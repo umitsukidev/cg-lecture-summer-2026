@@ -23,6 +23,7 @@ impl Point2Ext for Point2 {
 #[allow(dead_code)]
 pub trait ColorExt {
     fn cmyk(cyan: f32, magenta: f32, yellow: f32, black: f32) -> Color;
+    fn to_cmyk_f32_array(self) -> [f32; 4];
 }
 
 impl ColorExt for Color {
@@ -32,5 +33,27 @@ impl ColorExt for Color {
         let blue = (1.0 - yellow) * (1.0 - black);
 
         Color::srgb(red, green, blue)
+    }
+
+    fn to_cmyk_f32_array(self) -> [f32; 4] {
+        let [red, green, blue] = self.to_srgba().to_f32_array_no_alpha();
+
+        let max_rgb = [red, green, blue]
+            .into_iter()
+            .reduce(f32::max)
+            .unwrap_or(0.0);
+
+        let (cyan, magenta, yellow, black) = if max_rgb == 0.0 {
+            (0.0, 0.0, 0.0, 1.0)
+        } else {
+            (
+                (max_rgb - red) / max_rgb,
+                (max_rgb - green) / max_rgb,
+                (max_rgb - blue) / max_rgb,
+                1.0 - max_rgb,
+            )
+        };
+
+        [cyan, magenta, yellow, black]
     }
 }

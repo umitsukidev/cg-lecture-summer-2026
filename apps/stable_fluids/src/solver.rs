@@ -18,7 +18,8 @@ pub struct Solver {
     pub v: [Array2<f32>; 2],
     pub div: Array2<f32>,
     pub prs: Array2<f32>,
-    pub ink: [Array2<f32>; 2],
+    pub ink: [Array2<[f32; 4]>; 2],
+    pub ink_color: [f32; 4],
     /// (current, prev)
     pub velocity_index: (usize, usize),
     /// (current, prev)
@@ -41,7 +42,8 @@ impl Solver {
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             div: Array2::zeros((X_N, Y_N)),
             prs: Array2::zeros((X_N, Y_N)),
-            ink: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
+            ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), [0.0; 4])),
+            ink_color: [0.8, 0.2, 0.2, 0.5],
             velocity_index: (0, 1),
             ink_index: (0, 1),
             mouse_pressed: false,
@@ -143,7 +145,9 @@ impl Solver {
                     1.0 - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx, my)) / self.src_rad;
                 let pct = f32::max(pct, 0.0) * self.src_ink_amp;
 
-                *ink_val += pct;
+                for (ink_channel, color) in ink_val.iter_mut().zip(self.ink_color) {
+                    *ink_channel += pct * color;
+                }
             });
         }
     }
@@ -327,13 +331,16 @@ impl Solver {
             let s = px - i0 as f32;
             let t = py - j0 as f32;
 
-            let ink = (
-                (ink_prev[[i0, j0]], ink_prev[[i0, j1]]),
-                (ink_prev[[i1, j0]], ink_prev[[i1, j1]]),
-            );
-            let ink = Self::bilinear(s, t, ink);
+            for (channel, ink_curr) in ink_val.iter_mut().enumerate() {
+                let ink = (
+                    (ink_prev[[i0, j0]][channel], ink_prev[[i0, j1]][channel]),
+                    (ink_prev[[i1, j0]][channel], ink_prev[[i1, j1]][channel]),
+                );
 
-            *ink_val = ink;
+                let ink = Self::bilinear(s, t, ink);
+
+                *ink_curr = ink;
+            }
         })
     }
 
@@ -371,13 +378,10 @@ impl Solver {
             // 壁
             Rgba::<u8>([60, 60, 150, 255])
         } else {
-            let pixel = self.ink[self.ink_index.0][[x, y]].clamp(0.0, 1.0);
+            let [c, m, y, k] =
+                self.ink[self.ink_index.0][[x, y]].map(|value| value.clamp(0.0, 1.0));
 
-            Rgba(
-                Color::cmyk(pixel, pixel, pixel, pixel)
-                    .to_srgba()
-                    .to_u8_array(),
-            )
+            Rgba(Color::cmyk(c, m, y, k).to_srgba().to_u8_array())
         }
     }
 

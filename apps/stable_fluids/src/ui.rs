@@ -1,6 +1,6 @@
 use crate::{
     Model,
-    nannou_utils::Point2Ext,
+    nannou_utils::{ColorExt, Point2Ext},
     solver::{H, X_N, Y_N},
 };
 use nannou::prelude::{
@@ -157,40 +157,40 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             ui.separator();
 
-            let src_vel_amp = ui.label("src_vel_amp");
+            let src_vel_amp_label = ui.label("src_vel_amp");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_vel_amp, 0.0..=0.4)
                     .step_by(0.01)
                     .smart_aim(false)
                     .fixed_decimals(2),
             )
-            .labelled_by(src_vel_amp.id);
+            .labelled_by(src_vel_amp_label.id);
 
-            let src_ink_amp = ui.label("src_ink_amp");
+            let src_ink_amp_label = ui.label("src_ink_amp");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_ink_amp, 0.0..=0.4)
                     .step_by(0.01)
                     .smart_aim(false)
                     .fixed_decimals(2),
             )
-            .labelled_by(src_ink_amp.id);
+            .labelled_by(src_ink_amp_label.id);
 
-            let src_rad = ui.label("src_rad");
+            let src_rad_label = ui.label("src_rad");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_rad, 0.01..=20.0)
                     .step_by(0.01)
                     .smart_aim(false)
                     .fixed_decimals(2),
             )
-            .labelled_by(src_rad.id);
+            .labelled_by(src_rad_label.id);
 
-            let max_gs_iterate = ui.label("max_gs_iterate");
+            let max_gs_iterate_label = ui.label("max_gs_iterate");
             ui.add(
                 egui::Slider::new(&mut model.solver.max_gs_iterate, 1..=20000)
                     .step_by(1.0)
                     .smart_aim(false),
             )
-            .labelled_by(max_gs_iterate.id);
+            .labelled_by(max_gs_iterate_label.id);
 
             ui.separator();
 
@@ -198,5 +198,17 @@ pub fn display_gui(app: &App, model: &mut Model) {
             if ui.button("リセット").clicked() {
                 model.solver.reset();
             }
+
+            ui.separator();
+
+            let ink_color_label = ui.label("インクの色");
+            let ink_color = model.solver.ink_color;
+            let mut ink_color = Color::cmyk(ink_color[0], ink_color[1], ink_color[2], ink_color[3])
+                .to_srgba()
+                .to_u8_array_no_alpha();
+            ui.color_edit_button_srgb(&mut ink_color)
+                .labelled_by(ink_color_label.id);
+            model.solver.ink_color =
+                Color::srgb_u8(ink_color[0], ink_color[1], ink_color[2]).to_cmyk_f32_array();
         });
 }
