@@ -4,7 +4,6 @@ use crate::{
 };
 use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 pub const X_N: usize = 320;
 pub const Y_N: usize = 240;
@@ -23,8 +22,7 @@ pub struct Solver {
     /// [0]: current, [1]: prev
     pub v: [Array2<f32>; 2],
     pub div: Array2<f32>,
-    /// [0]: current, [1]: prev
-    pub prs: [Array2<f32>; 2],
+    pub prs: Array2<f32>,
     /// [0]: current, [1]: prev
     pub ink: [Array2<Cmyk>; 2],
     pub ink_color: Cmyk,
@@ -45,7 +43,7 @@ impl Solver {
             u: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             div: Array2::zeros((X_N, Y_N)),
-            prs: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
+            prs: Array2::zeros((X_N, Y_N)),
             ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), Cmyk::default())),
             ink_color: Cmyk::new(0.8, 0.2, 0.2, 0.5),
             mouse_pressed: false,
@@ -183,37 +181,26 @@ impl Solver {
         // ---------------------------
         let tolerance = 0.001;
         for _ in 0..self.max_pressure_iterations {
-            self.prs.swap(0, 1);
+            let div = &self.div;
 
-            let err = {
-                let div = &self.div;
+            let prs = &mut self.prs;
 
-                let [prs_curr, prs_prev] = &mut self.prs;
+            let mut err = 0.0;
 
-                #[allow(clippy::reversed_empty_ranges)]
-                let mut prs_inner = prs_curr.slice_mut(s![1..-1, 1..-1]);
-                #[allow(clippy::reversed_empty_ranges)]
-                let prs_prev_inner = prs_prev.slice(s![1..-1, 1..-1]);
+            for i in 1..X_N - 1 {
+                for j in 1..Y_N - 1 {
+                    let prev_prs = prs[[i, j]];
 
-                Zip::indexed(&mut prs_inner).par_for_each(|(i, j), prs_val| {
-                    let i = i + 1;
-                    let j = j + 1;
-
-                    *prs_val = (prs_prev[[i + 1, j]]
-                        + prs_prev[[i - 1, j]]
-                        + prs_prev[[i, j + 1]]
-                        + prs_prev[[i, j - 1]]
+                    prs[[i, j]] = (prs[[i + 1, j]]
+                        + prs[[i - 1, j]]
+                        + prs[[i, j + 1]]
+                        + prs[[i, j - 1]]
                         + div[[i, j]])
                         / 4.0;
-                });
 
-                Zip::from(&prs_inner)
-                    .and(prs_prev_inner)
-                    .into_par_iter()
-                    .map(|(curr, prev)| (*curr - prev).abs())
-                    .max_by(|a, b| a.total_cmp(b))
-                    .unwrap_or(0.0)
-            };
+                    err = f32::max((prs[[i, j]] - prev_prs).abs(), err);
+                }
+            }
 
             self.enforce_wall_pressure();
 
@@ -231,7 +218,7 @@ impl Solver {
         #[allow(clippy::reversed_empty_ranges)]
         let mut v_inner = self.v[0].slice_mut(s![1..-1, 1..-1]);
 
-        let prs = &self.prs[0];
+        let prs = &self.prs;
 
         Zip::indexed(&mut u_inner)
             .and(&mut v_inner)
@@ -348,7 +335,7 @@ impl Solver {
     }
 
     fn enforce_wall_pressure(&mut self) {
-        let prs = &mut self.prs[0];
+        let prs = &mut self.prs;
         for n in 0..X_N {
             prs[[n, 0]] = prs[[n, 1]];
             prs[[n, Y_N - 1]] = prs[[n, Y_N - 2]];
