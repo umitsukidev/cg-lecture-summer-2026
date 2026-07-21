@@ -124,7 +124,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(10.0, 10.0))
         .show(&egui, |ui| {
             egui::Frame::window(ui.style()).show(ui, |ui| {
-                ui.set_width(60.0);
+                ui.set_width(70.0);
                 ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
                     ui.label(egui::RichText::new(format!("fps: {:.0}", fps)).monospace());
                 });
