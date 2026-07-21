@@ -183,8 +183,9 @@ impl Solver {
         // ---------------------------
         let tolerance = 0.001;
         for _ in 0..self.max_pressure_iterations {
-            let err;
-            {
+            self.prs.swap(0, 1);
+
+            let err = {
                 let div = &self.div;
 
                 let [prs_curr, prs_prev] = &mut self.prs;
@@ -206,17 +207,15 @@ impl Solver {
                         / 4.0;
                 });
 
-                err = Zip::from(&prs_inner)
+                Zip::from(&prs_inner)
                     .and(prs_prev_inner)
                     .into_par_iter()
                     .map(|(curr, prev)| (*curr - prev).abs())
                     .max_by(|a, b| a.total_cmp(b))
-                    .unwrap_or(0.0);
-            }
+                    .unwrap_or(0.0)
+            };
 
             self.enforce_wall_pressure();
-
-            self.prs.swap(0, 1);
 
             // 収束判定
             if err < tolerance {
