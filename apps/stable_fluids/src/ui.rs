@@ -5,8 +5,9 @@ use crate::{
 };
 use nannou::prelude::{
     egui::{
-        FontTweak,
+        FontTweak, Shadow, Visuals,
         epaint::text::{Tag, VariationCoords},
+        style::Interaction,
     },
     *,
 };
@@ -107,11 +108,21 @@ pub fn display_gui(app: &App, model: &mut Model) {
     let egui = app.egui();
     let fps = model.displayed_fps;
 
+    egui.set_global_style(egui::Style {
+        visuals: Visuals {
+            window_shadow: Shadow::NONE,
+            ..Default::default()
+        },
+        interaction: Interaction {
+            selectable_labels: false,
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+
     egui::Area::new(egui::Id::new("fps_area"))
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(10.0, 10.0))
         .show(&egui, |ui| {
-            ui.style_mut().interaction.selectable_labels = false;
-
             egui::Frame::window(ui.style()).show(ui, |ui| {
                 ui.set_width(60.0);
                 ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
@@ -149,8 +160,6 @@ pub fn display_gui(app: &App, model: &mut Model) {
                 .insert(0, "NotoSansJP".to_owned());
 
             ui.set_fonts(fonts);
-
-            ui.style_mut().interaction.selectable_labels = false;
 
             ui.label("Press F3 to hide GUI");
 

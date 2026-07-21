@@ -166,8 +166,8 @@ fn update(app: &App, model: &mut Model) {
             ]);
             mesh_guard.resize(X_N * Y_N, zero_tri);
         }
-        let u = model.solver.u[model.solver.velocity_index.0].view();
-        let v = model.solver.v[model.solver.velocity_index.0].view();
+        let u = model.solver.u[0].view();
+        let v = model.solver.v[0].view();
         update_vector_mesh(&mut mesh_guard, u, v, window_rect);
     }
 

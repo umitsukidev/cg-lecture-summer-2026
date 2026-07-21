@@ -18,18 +18,16 @@ pub struct Solver {
     pub src_rad: f32,
     pub src_vel_amp: f32,
     pub src_ink_amp: f32,
+    /// [0]: current, [1]: prev
     pub u: [Array2<f32>; 2],
+    /// [0]: current, [1]: prev
     pub v: [Array2<f32>; 2],
     pub div: Array2<f32>,
+    /// [0]: current, [1]: prev
     pub prs: [Array2<f32>; 2],
+    /// [0]: current, [1]: prev
     pub ink: [Array2<Cmyk>; 2],
     pub ink_color: Cmyk,
-    /// (current, prev)
-    pub velocity_index: (usize, usize),
-    /// (current, prev)
-    pub prs_index: (usize, usize),
-    /// (current, prev)
-    pub ink_index: (usize, usize),
     mouse_pressed: bool,
     mouse_pos: Option<Point2>,
     prev_mouse_pos: Option<Point2>,
@@ -50,9 +48,6 @@ impl Solver {
             prs: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), Cmyk::default())),
             ink_color: Cmyk::new(0.8, 0.2, 0.2, 0.5),
-            velocity_index: (0, 1),
-            prs_index: (0, 1),
-            ink_index: (0, 1),
             mouse_pressed: false,
             mouse_pos: None,
             prev_mouse_pos: None,
@@ -98,9 +93,9 @@ impl Solver {
 
             // 壁を取り除く
             #[allow(clippy::reversed_empty_ranges)]
-            let mut u_inner = self.u[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+            let mut u_inner = self.u[0].slice_mut(s![1..-1, 1..-1]);
             #[allow(clippy::reversed_empty_ranges)]
-            let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+            let mut v_inner = self.v[0].slice_mut(s![1..-1, 1..-1]);
 
             Zip::indexed(&mut u_inner)
                 .and(&mut v_inner)
@@ -135,7 +130,7 @@ impl Solver {
 
         if let Some(mouse_pos) = self.mouse_pos {
             #[allow(clippy::reversed_empty_ranges)]
-            let mut ink_inner = self.ink[self.ink_index.0].slice_mut(s![1..-1, 1..-1]);
+            let mut ink_inner = self.ink[0].slice_mut(s![1..-1, 1..-1]);
 
             let width = self.window_rect.w();
             let height = self.window_rect.h();
@@ -168,8 +163,8 @@ impl Solver {
         #[allow(clippy::reversed_empty_ranges)]
         let mut div_inner = self.div.slice_mut(s![1..-1, 1..-1]);
 
-        let u = &self.u[self.velocity_index.0];
-        let v = &self.v[self.velocity_index.0];
+        let u = &self.u[0];
+        let v = &self.v[0];
 
         Zip::indexed(&mut div_inner).par_for_each(|(i, j), div_val| {
             // 壁を取り除いたぶんのインデックスの修正
@@ -192,17 +187,7 @@ impl Solver {
             {
                 let div = &self.div;
 
-                let (prs_curr, prs_prev) = {
-                    let [prs0, prs1] = &mut self.prs;
-
-                    let current_is_first = self.prs_index.0 == 0;
-
-                    if current_is_first {
-                        (prs0, &*prs1)
-                    } else {
-                        (prs1, &*prs0)
-                    }
-                };
+                let [prs_curr, prs_prev] = &mut self.prs;
 
                 #[allow(clippy::reversed_empty_ranges)]
                 let mut prs_inner = prs_curr.slice_mut(s![1..-1, 1..-1]);
@@ -231,7 +216,7 @@ impl Solver {
 
             self.enforce_wall_pressure();
 
-            self.prs_index = (self.prs_index.1, self.prs_index.0);
+            self.prs.swap(0, 1);
 
             // 収束判定
             if err < tolerance {
@@ -243,11 +228,11 @@ impl Solver {
         // 3. 圧力勾配を求めて速度を更新
         // ---------------------------
         #[allow(clippy::reversed_empty_ranges)]
-        let mut u_inner = self.u[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+        let mut u_inner = self.u[0].slice_mut(s![1..-1, 1..-1]);
         #[allow(clippy::reversed_empty_ranges)]
-        let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
+        let mut v_inner = self.v[0].slice_mut(s![1..-1, 1..-1]);
 
-        let prs = &self.prs[self.prs_index.0];
+        let prs = &self.prs[0];
 
         Zip::indexed(&mut u_inner)
             .and(&mut v_inner)
@@ -265,29 +250,12 @@ impl Solver {
     }
 
     fn advection_velocity(&mut self) {
-        self.velocity_index = (self.velocity_index.1, self.velocity_index.0);
+        self.u.swap(0, 1);
+        self.v.swap(0, 1);
 
-        let current_is_first = self.velocity_index.0 == 0;
+        let [u_curr, u_prev] = &mut self.u;
 
-        let (u_curr, u_prev) = {
-            let [u0, u1] = &mut self.u;
-
-            if current_is_first {
-                (u0, &*u1)
-            } else {
-                (u1, &*u0)
-            }
-        };
-
-        let (v_curr, v_prev) = {
-            let [v0, v1] = &mut self.v;
-
-            if current_is_first {
-                (v0, &*v1)
-            } else {
-                (v1, &*v0)
-            }
-        };
+        let [v_curr, v_prev] = &mut self.v;
 
         // 壁を取り除く
         #[allow(clippy::reversed_empty_ranges)]
@@ -332,19 +300,9 @@ impl Solver {
     }
 
     fn advection_ink(&mut self) {
-        self.ink_index = (self.ink_index.1, self.ink_index.0);
+        self.ink.swap(0, 1);
 
-        let (ink_curr, ink_prev) = {
-            let [ink0, ink1] = &mut self.ink;
-
-            let current_is_first = self.ink_index.0 == 0;
-
-            if current_is_first {
-                (ink0, &*ink1)
-            } else {
-                (ink1, &*ink0)
-            }
-        };
+        let [ink_curr, ink_prev] = &mut self.ink;
 
         // 壁を取り除く
         #[allow(clippy::reversed_empty_ranges)]
@@ -355,8 +313,8 @@ impl Solver {
             let i = i + 1;
             let j = j + 1;
 
-            let px = ((i as f32) * H - self.u[self.velocity_index.0][[i, j]] * self.dt) / H;
-            let py = ((j as f32) * H - self.v[self.velocity_index.0][[i, j]] * self.dt) / H;
+            let px = ((i as f32) * H - self.u[0][[i, j]] * self.dt) / H;
+            let py = ((j as f32) * H - self.v[0][[i, j]] * self.dt) / H;
 
             let (i0, j0) = (
                 (px.floor()).clamp(1.0, X_N as f32 - 2.0) as usize,
@@ -391,7 +349,7 @@ impl Solver {
     }
 
     fn enforce_wall_pressure(&mut self) {
-        let prs = &mut self.prs[self.prs_index.0];
+        let prs = &mut self.prs[0];
         for n in 0..X_N {
             prs[[n, 0]] = prs[[n, 1]];
             prs[[n, Y_N - 1]] = prs[[n, Y_N - 2]];
@@ -441,14 +399,8 @@ impl Solver {
                 sx,
                 sy,
                 (
-                    (
-                        self.ink[self.ink_index.0][[x0, y0]][i],
-                        self.ink[self.ink_index.0][[x0, y1]][i],
-                    ),
-                    (
-                        self.ink[self.ink_index.0][[x1, y0]][i],
-                        self.ink[self.ink_index.0][[x1, y1]][i],
-                    ),
+                    (self.ink[0][[x0, y0]][i], self.ink[0][[x0, y1]][i]),
+                    (self.ink[0][[x1, y0]][i], self.ink[0][[x1, y1]][i]),
                 ),
             );
         }
