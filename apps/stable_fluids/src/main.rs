@@ -37,7 +37,7 @@ fn main() {
 fn model(app: &App) -> Model {
     let window = app
         .new_window()
-        .size(X_N as u32 * 5, Y_N as u32 * 5)
+        .size(1200, 900)
         .resizable(false)
         .key_pressed(key_pressed)
         .view(view)

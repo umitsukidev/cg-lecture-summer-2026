@@ -5,8 +5,8 @@ use crate::{
 use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
 
-pub const X_N: usize = 240;
-pub const Y_N: usize = 180;
+pub const X_N: usize = 320;
+pub const Y_N: usize = 240;
 pub const H: f32 = 1.0 / (if X_N > Y_N { X_N } else { Y_N }) as f32;
 
 #[derive(Debug, Clone)]
@@ -374,17 +374,54 @@ impl Solver {
     }
 
     pub fn get_pixel(&self, x: usize, y: usize) -> Rgba<u8> {
-        let x = x * X_N / self.window_rect.w() as usize;
-        let y = y * Y_N / self.window_rect.h() as usize;
+        let width = self.window_rect.w();
+        let height = self.window_rect.h();
 
-        if x == 0 || y == 0 || x == X_N - 1 || y == Y_N - 1 {
-            // 壁
-            Rgba::<u8>([255, 255, 255, 255])
-        } else {
-            let [c, m, y, k] = self.ink[self.ink_index.0][[x, y]].map(|value| 1.0 - (-value).exp());
+        let x = (x as f32 + 0.5) / width;
+        let y = (y as f32 + 0.5) / height;
 
-            Rgba(Color::cmyk(c, m, y, k).to_srgba().to_u8_array())
+        let cell_x = (x * X_N as f32).floor() as usize;
+        let cell_y = (y * Y_N as f32).floor() as usize;
+
+        if cell_x == 0 || cell_y == 0 || cell_x >= X_N - 1 || cell_y >= Y_N - 1 {
+            return Rgba([255, 255, 255, 255]);
         }
+
+        let inner_x = (x * X_N as f32 - 1.0) / (X_N - 2) as f32;
+        let inner_y = (y * Y_N as f32 - 1.0) / (Y_N - 2) as f32;
+
+        let gx = 1.0 + inner_x * (X_N - 3) as f32;
+        let gy = 1.0 + inner_y * (Y_N - 3) as f32;
+
+        let x0 = gx.floor() as usize;
+        let y0 = gy.floor() as usize;
+        let x1 = (x0 + 1).min(X_N - 2);
+        let y1 = (y0 + 1).min(Y_N - 2);
+
+        let sx = gx - x0 as f32;
+        let sy = gy - y0 as f32;
+
+        let mut ink = Cmyk::default();
+
+        for (i, channel) in ink.iter_mut().enumerate() {
+            *channel = Self::bilinear(
+                sx,
+                sy,
+                (
+                    (
+                        self.ink[self.ink_index.0][[x0, y0]][i],
+                        self.ink[self.ink_index.0][[x0, y1]][i],
+                    ),
+                    (
+                        self.ink[self.ink_index.0][[x1, y0]][i],
+                        self.ink[self.ink_index.0][[x1, y1]][i],
+                    ),
+                ),
+            );
+        }
+
+        let [c, m, y, k] = ink.map(|value| 1.0 - (-value).exp());
+        Rgba(Color::cmyk(c, m, y, k).to_srgba().to_u8_array())
     }
 
     pub fn reset(&mut self) {
