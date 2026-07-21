@@ -190,7 +190,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             let max_gs_iterate_label = ui.label("圧力反復計算の最大回数");
             ui.add(
-                egui::Slider::new(&mut model.solver.max_gs_iterate, 1..=2000)
+                egui::Slider::new(&mut model.solver.max_pressure_iterations, 1..=2000)
                     .step_by(1.0)
                     .smart_aim(false),
             )

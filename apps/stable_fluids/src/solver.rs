@@ -14,7 +14,7 @@ pub const H: f32 = 1.0 / (if X_N > Y_N { X_N } else { Y_N }) as f32;
 pub struct Solver {
     window_rect: Rect,
     dt: f32,
-    pub max_gs_iterate: u32,
+    pub max_pressure_iterations: u32,
     pub src_rad: f32,
     pub src_vel_amp: f32,
     pub src_ink_amp: f32,
@@ -40,7 +40,7 @@ impl Solver {
         Self {
             window_rect,
             dt: 1.0 / 60.0,
-            max_gs_iterate: 50,
+            max_pressure_iterations: 50,
             src_rad: 8.0,
             src_vel_amp: 0.1,
             src_ink_amp: 0.1,
@@ -187,7 +187,7 @@ impl Solver {
         //    （ヤコビ法にしてみた）
         // ---------------------------
         let tolerance = 0.001;
-        for _ in 0..self.max_gs_iterate {
+        for _ in 0..self.max_pressure_iterations {
             let err;
             {
                 let div = &self.div;
