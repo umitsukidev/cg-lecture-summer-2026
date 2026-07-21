@@ -4,6 +4,7 @@ use crate::{
 };
 use nannou::{image::Rgba, prelude::*};
 use ndarray::{Array2, Zip, s};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 pub const X_N: usize = 320;
 pub const Y_N: usize = 240;
@@ -20,11 +21,13 @@ pub struct Solver {
     pub u: [Array2<f32>; 2],
     pub v: [Array2<f32>; 2],
     pub div: Array2<f32>,
-    pub prs: Array2<f32>,
+    pub prs: [Array2<f32>; 2],
     pub ink: [Array2<Cmyk>; 2],
     pub ink_color: Cmyk,
     /// (current, prev)
     pub velocity_index: (usize, usize),
+    /// (current, prev)
+    pub prs_index: (usize, usize),
     /// (current, prev)
     pub ink_index: (usize, usize),
     mouse_pressed: bool,
@@ -44,10 +47,11 @@ impl Solver {
             u: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             div: Array2::zeros((X_N, Y_N)),
-            prs: Array2::zeros((X_N, Y_N)),
+            prs: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), Cmyk::default())),
             ink_color: Cmyk::new(0.8, 0.2, 0.2, 0.5),
             velocity_index: (0, 1),
+            prs_index: (0, 1),
             ink_index: (0, 1),
             mouse_pressed: false,
             mouse_pos: None,
@@ -183,29 +187,50 @@ impl Solver {
         // ---------------------------
         let tolerance = 0.001;
         for _ in 0..self.max_gs_iterate {
-            let mut err = 0.0;
+            let err;
+            {
+                let div = &self.div;
 
-            let prs = &mut self.prs;
-            let div = &self.div;
+                let (prs_curr, prs_prev) = {
+                    let [prs0, prs1] = &mut self.prs;
 
-            for i in 1..(X_N - 1) {
-                for j in 1..(Y_N - 1) {
-                    let prev_prs_val = prs[[i, j]];
+                    let current_is_first = self.prs_index.0 == 0;
 
-                    let prs_val = (prs[[i + 1, j]]
-                        + prs[[i - 1, j]]
-                        + prs[[i, j + 1]]
-                        + prs[[i, j - 1]]
+                    if current_is_first {
+                        (prs0, &*prs1)
+                    } else {
+                        (prs1, &*prs0)
+                    }
+                };
+
+                #[allow(clippy::reversed_empty_ranges)]
+                let mut prs_inner = prs_curr.slice_mut(s![1..-1, 1..-1]);
+                #[allow(clippy::reversed_empty_ranges)]
+                let prs_prev_inner = prs_prev.slice(s![1..-1, 1..-1]);
+
+                Zip::indexed(&mut prs_inner).par_for_each(|(i, j), prs_val| {
+                    let i = i + 1;
+                    let j = j + 1;
+
+                    *prs_val = (prs_prev[[i + 1, j]]
+                        + prs_prev[[i - 1, j]]
+                        + prs_prev[[i, j + 1]]
+                        + prs_prev[[i, j - 1]]
                         + div[[i, j]])
                         / 4.0;
+                });
 
-                    prs[[i, j]] = prs_val;
-
-                    err = f32::max((prev_prs_val - prs_val).abs(), err);
-                }
+                err = Zip::from(&prs_inner)
+                    .and(prs_prev_inner)
+                    .into_par_iter()
+                    .map(|(curr, prev)| (*curr - prev).abs())
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap_or(0.0);
             }
 
             self.enforce_wall_pressure();
+
+            self.prs_index = (self.prs_index.1, self.prs_index.0);
 
             // 収束判定
             if err < tolerance {
@@ -221,7 +246,7 @@ impl Solver {
         #[allow(clippy::reversed_empty_ranges)]
         let mut v_inner = self.v[self.velocity_index.0].slice_mut(s![1..-1, 1..-1]);
 
-        let prs = &self.prs;
+        let prs = &self.prs[self.prs_index.0];
 
         Zip::indexed(&mut u_inner)
             .and(&mut v_inner)
@@ -358,7 +383,7 @@ impl Solver {
     }
 
     fn enforce_wall_pressure(&mut self) {
-        let prs = &mut self.prs;
+        let prs = &mut self.prs[self.prs_index.0];
         for n in 0..X_N {
             prs[[n, 0]] = prs[[n, 1]];
             prs[[n, Y_N - 1]] = prs[[n, Y_N - 2]];
