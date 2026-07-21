@@ -266,21 +266,26 @@ impl Solver {
     fn advection_velocity(&mut self) {
         self.velocity_index = (self.velocity_index.1, self.velocity_index.0);
 
-        let [u0, u1] = &mut self.u;
-        let [v0, v1] = &mut self.v;
-
         let current_is_first = self.velocity_index.0 == 0;
 
-        let (u_curr, u_prev) = if current_is_first {
-            (u0, &*u1)
-        } else {
-            (u1, &*u0)
+        let (u_curr, u_prev) = {
+            let [u0, u1] = &mut self.u;
+
+            if current_is_first {
+                (u0, &*u1)
+            } else {
+                (u1, &*u0)
+            }
         };
 
-        let (v_curr, v_prev) = if current_is_first {
-            (v0, &*v1)
-        } else {
-            (v1, &*v0)
+        let (v_curr, v_prev) = {
+            let [v0, v1] = &mut self.v;
+
+            if current_is_first {
+                (v0, &*v1)
+            } else {
+                (v1, &*v0)
+            }
         };
 
         // 壁を取り除く
@@ -328,14 +333,16 @@ impl Solver {
     fn advection_ink(&mut self) {
         self.ink_index = (self.ink_index.1, self.ink_index.0);
 
-        let [ink0, ink1] = &mut self.ink;
+        let (ink_curr, ink_prev) = {
+            let [ink0, ink1] = &mut self.ink;
 
-        let current_is_first = self.ink_index.0 == 0;
+            let current_is_first = self.ink_index.0 == 0;
 
-        let (ink_curr, ink_prev) = if current_is_first {
-            (ink0, &*ink1)
-        } else {
-            (ink1, &*ink0)
+            if current_is_first {
+                (ink0, &*ink1)
+            } else {
+                (ink1, &*ink0)
+            }
         };
 
         // 壁を取り除く
