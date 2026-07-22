@@ -1,6 +1,6 @@
-use derive_more::{Deref, DerefMut};
+use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Into};
 
-#[derive(Debug, Clone, Copy, Default, Deref, DerefMut)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Deref, DerefMut, From, Into, AsRef, AsMut)]
 pub struct Cmyk(pub [f32; 4]);
 
 impl Cmyk {

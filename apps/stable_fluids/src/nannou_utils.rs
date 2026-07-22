@@ -1,6 +1,5 @@
-use nannou::prelude::*;
-
 use crate::cmyk::Cmyk;
+use nannou::prelude::*;
 
 #[allow(dead_code)]
 pub trait Point2Ext {
