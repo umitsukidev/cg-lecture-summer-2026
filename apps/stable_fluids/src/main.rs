@@ -82,7 +82,7 @@ fn model(app: &App) -> Model {
         show_display_grids: false,
         show_display_velocity: false,
         show_gui: true,
-        set_color_by_cmyk: false,
+        set_color_by_cmyk: true,
         prev_mouse_pos: None,
         solver,
         displayed_fps: 0.0,

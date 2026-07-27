@@ -26,6 +26,7 @@ msaa
 multisampled
 nannou
 ndarray
+noninteractive
 Noto
 objdetect
 peekable

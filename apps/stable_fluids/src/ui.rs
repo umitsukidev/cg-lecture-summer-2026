@@ -15,6 +15,31 @@ use ndarray::ArrayView2;
 use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
 
+fn color_mode_button(ui: &mut egui::Ui, label: &str, selected: bool) -> egui::Response {
+    let button_size = egui::vec2(52.0, ui.spacing().interact_size.y);
+    let (rect, response) = ui.allocate_exact_size(button_size, egui::Sense::click());
+    let visuals = ui.style().interact(&response);
+    let (fill, text_color) = if selected {
+        (
+            ui.visuals().selection.bg_fill,
+            ui.visuals().selection.stroke.color,
+        )
+    } else {
+        (visuals.weak_bg_fill, visuals.text_color())
+    };
+
+    ui.painter().rect_filled(rect, visuals.corner_radius, fill);
+    ui.painter().text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        label,
+        egui::TextStyle::Button.resolve(ui.style()),
+        text_color,
+    );
+
+    response
+}
+
 pub fn update_vector_mesh(
     vector_mesh: &mut [geom::Tri<(Point3, Color)>],
     u: ArrayView2<f32>,
@@ -215,7 +240,25 @@ pub fn display_gui(app: &App, model: &mut Model) {
             ui.separator();
 
             let ink_color_label = ui.label("インクの色");
-            ui.checkbox(&mut model.set_color_by_cmyk, "CMYK");
+            let switch_fill = ui.visuals().widgets.inactive.weak_bg_fill;
+            let switch_stroke = ui.visuals().widgets.noninteractive.bg_stroke;
+            let switch_corner_radius = ui.visuals().widgets.inactive.corner_radius;
+            egui::Frame::new()
+                .fill(switch_fill)
+                .stroke(switch_stroke)
+                .corner_radius(switch_corner_radius)
+                .inner_margin(egui::Margin::same(1))
+                .show(ui, |ui| {
+                    ui.spacing_mut().item_spacing.x = 1.0;
+                    ui.horizontal(|ui| {
+                        if color_mode_button(ui, "CMYK", model.set_color_by_cmyk).clicked() {
+                            model.set_color_by_cmyk = true;
+                        }
+                        if color_mode_button(ui, "RGB", !model.set_color_by_cmyk).clicked() {
+                            model.set_color_by_cmyk = false;
+                        }
+                    });
+                });
             ui.group(|ui| {
                 if !model.set_color_by_cmyk {
                     let ink_color = model.solver.ink_color;
