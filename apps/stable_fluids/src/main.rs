@@ -180,7 +180,7 @@ fn update(app: &App, model: &mut Model) {
 fn view(app: &App, model: &Model) {
     let draw = app.draw();
 
-    draw.background().color(BLACK);
+    draw.background().color(WHITE);
 
     let window_rect = app.window_rect();
 

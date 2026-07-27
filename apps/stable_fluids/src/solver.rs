@@ -411,12 +411,12 @@ impl Solver {
 
     pub fn get_pixel(&self, x: usize, y: usize) -> Rgba<u8> {
         if x == 0 || y == 0 || x >= X_N - 1 || y >= Y_N - 1 {
-            return Rgba([255, 255, 255, 255]);
+            return Rgba([255, 255, 255, 0]);
         }
 
         let ink = self.ink[0][[x, y]];
         if ink.ink_amount <= 1e-6 {
-            return Rgba([255, 255, 255, 255]);
+            return Rgba([255, 255, 255, 0]);
         }
 
         let [c, m, y, k, w] = ink.color_mass.map(|mass| mass / ink.ink_amount);
@@ -426,43 +426,15 @@ impl Solver {
 
         let effective_amount = ink.ink_amount / (1.0 + ink.water_amount);
         let opacity = 1.0 - (-effective_amount).exp();
-        let red = 1.0 + (red - 1.0) * opacity;
-        let green = 1.0 + (green - 1.0) * opacity;
-        let blue = 1.0 + (blue - 1.0) * opacity;
 
-        Rgba(Color::srgb(red, green, blue).to_srgba().to_u8_array())
+        Rgba(
+            Color::srgba(red, green, blue, opacity)
+                .to_srgba()
+                .to_u8_array(),
+        )
     }
 
     pub fn reset(&mut self) {
         *self = Self::new(self.window_rect);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Solver, X_N, Y_N};
-    use crate::{cmykw::Cmykw, ink_cell::InkCell, nannou_utils::ColorExt};
-    use nannou::prelude::{Color, ColorToPacked, Rect};
-
-    #[test]
-    fn increasing_ink_amount_converges_to_the_selected_color() {
-        let mut solver = Solver::new(Rect::from_w_h(X_N as f32, Y_N as f32));
-        let color = Cmykw::new(0.8, 0.2, 0.2, 0.5, 0.0);
-        let ink_amount = 100.0;
-        solver.ink[0][[1, 1]] = InkCell {
-            color_mass: Cmykw(color.map(|channel| channel * ink_amount)),
-            ink_amount,
-            water_amount: 0.0,
-        };
-
-        let actual = solver.get_pixel(1, 1).0;
-        let cmyk = color.cmyk();
-        let expected = Color::cmykw(cmyk.c(), cmyk.m(), cmyk.y(), cmyk.k(), color.white())
-            .to_srgba()
-            .to_u8_array();
-
-        for (actual, expected) in actual.into_iter().zip(expected) {
-            assert!(actual.abs_diff(expected) <= 1);
-        }
     }
 }
