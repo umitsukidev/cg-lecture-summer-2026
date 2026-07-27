@@ -1,0 +1,10 @@
+{
+	"scripts": {
+		"build": "./scripts/build-web-dist.sh",
+		"dev": "wrangler dev",
+		"deploy": "pnpm run build && wrangler deploy"
+	},
+	"devDependencies": {
+		"wrangler": "^4.114.0"
+	}
+}

@@ -18,3 +18,11 @@ derive_more = "2.1.1"
 
 [workspace.lints.clippy]
 all = "warn"
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

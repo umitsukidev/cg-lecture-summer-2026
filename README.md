@@ -14,7 +14,11 @@ Cargo workspace 内の nannou アプリをまとめて Web 向けにビルドす
 
 いずれかのアプリがコンパイルに失敗しても残りのビルドは継続され、失敗したアプリの中間生成物は `dist/` に含まれません。少なくとも1つ成功すればコマンドは成功として終了し、`dist/index.html` には成功したアプリだけへのリンクが生成されます。すべて失敗した場合は終了コード `1` になります。
 
-事前に `cargo`、`trunk`、`python3` と `wasm32-unknown-unknown` ターゲットが必要です。
+成功した各アプリのすべての Wasm は、Cloudflare Workers Static Assets の1ファイル25 MiB制限に収まるよう、Brotli圧縮した内容で同じ `.wasm` ファイルへ置き換えられます。Wasmへのリクエストだけは `worker/index.js` が先に処理し、二重圧縮を避けながら `Content-Encoding: br` と `Content-Type: application/wasm` を設定します。圧縮後も25 MiBを超えるアプリや圧縮に失敗したアプリは `dist/` に含まれません。
+
+このため `dist/` を通常の静的ファイルサーバーで直接配信することはできません。Cloudflareへのデプロイ前にローカル確認する場合は `pnpm exec wrangler dev` を使用してください。
+
+事前に `brotli`、`cargo`、`trunk`、`python3` と `wasm32-unknown-unknown` ターゲットが必要です。
 
 ## License
 

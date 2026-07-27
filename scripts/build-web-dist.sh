@@ -1,12 +1,15 @@
 #!/bin/sh
 
 # Build every nannou binary in the Cargo workspace independently.
+# Every Wasm file is Brotli-compressed in place for Cloudflare Static Assets.
+# worker/index.js serves these files with manual Content-Encoding handling.
 # A failed app is reported, but is not copied into the final dist directory.
 
 set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 dist_dir="$repo_root/dist"
+cloudflare_max_asset_size=26214400
 metadata_file=$(mktemp "${TMPDIR:-/tmp}/nannou-dist-metadata.XXXXXX")
 packages_file=$(mktemp "${TMPDIR:-/tmp}/nannou-dist-packages.XXXXXX")
 success_file=$(mktemp "${TMPDIR:-/tmp}/nannou-dist-success.XXXXXX")
@@ -34,12 +37,61 @@ cleanup() {
 
 trap cleanup EXIT HUP INT TERM
 
-for command_name in cargo trunk python3; do
+for command_name in brotli cargo trunk python3; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "error: required command not found: $command_name" >&2
     exit 1
   fi
 done
+
+prepare_static_assets() {
+  prepare_output_dir=$1
+  prepare_file_list=$2
+
+  find "$prepare_output_dir" -type f -name '*.wasm' -print >"$prepare_file_list"
+  if [ ! -s "$prepare_file_list" ]; then
+    echo "error: Trunk output contains no Wasm file" >&2
+    return 1
+  fi
+
+  while IFS= read -r prepare_wasm_file; do
+    prepare_compressed_file="$prepare_wasm_file.br"
+    prepare_original_size=$(wc -c <"$prepare_wasm_file" | tr -d ' ')
+
+    if ! brotli \
+      --quality=9 \
+      --force \
+      --output="$prepare_compressed_file" \
+      "$prepare_wasm_file"
+    then
+      echo "error: Brotli compression failed: $prepare_wasm_file" >&2
+      return 1
+    fi
+
+    if ! brotli --test "$prepare_compressed_file"; then
+      echo "error: Brotli verification failed: $prepare_compressed_file" >&2
+      return 1
+    fi
+
+    prepare_compressed_size=$(wc -c <"$prepare_compressed_file" | tr -d ' ')
+    if [ "$prepare_compressed_size" -ge "$prepare_original_size" ]; then
+      echo "error: Brotli did not reduce the Wasm file: $prepare_wasm_file" >&2
+      return 1
+    fi
+
+    mv -- "$prepare_compressed_file" "$prepare_wasm_file"
+    echo "BR    ${prepare_original_size} -> ${prepare_compressed_size} bytes"
+  done <"$prepare_file_list"
+
+  find "$prepare_output_dir" -type f -print >"$prepare_file_list"
+  while IFS= read -r prepare_asset_file; do
+    prepare_asset_size=$(wc -c <"$prepare_asset_file" | tr -d ' ')
+    if [ "$prepare_asset_size" -gt "$cloudflare_max_asset_size" ]; then
+      echo "error: asset still exceeds Cloudflare's 25 MiB limit: $prepare_asset_file" >&2
+      return 1
+    fi
+  done <"$prepare_file_list"
+}
 
 echo "Discovering nannou apps..."
 if ! cargo metadata \
@@ -136,7 +188,7 @@ while IFS="$(printf '\t')" read -r package_name binary_name manifest_path binary
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>$package_name — $binary_name</title>
-    <link data-trunk rel="rust" href="Cargo.toml" data-bin="$binary_name" />
+    <link data-trunk rel="rust" href="Cargo.toml" data-bin="$binary_name" data-wasm-opt="z" />
     <style>
       html, body {
         width: 100%;
@@ -171,14 +223,19 @@ EOF
         "$input_html" \
         --dist "$build_output" \
         --public-url "./" \
-        --release
+        --cargo-profile wasm-release
   )
   then
-    final_app_dir="$stage_dir/$app_route"
-    mkdir -p -- "$final_app_dir"
-    cp -R -- "$build_output/." "$final_app_dir/"
-    printf '%s\t%s\t%s\n' "$package_name" "$binary_name" "$app_route" >>"$success_file"
-    echo "OK    $app_route/index.html"
+    if prepare_static_assets "$build_output" "$build_dir/asset-files"; then
+      final_app_dir="$stage_dir/$app_route"
+      mkdir -p -- "$final_app_dir"
+      cp -R -- "$build_output/." "$final_app_dir/"
+      printf '%s\t%s\t%s\n' "$package_name" "$binary_name" "$app_route" >>"$success_file"
+      echo "OK    $app_route/index.html"
+    else
+      printf '%s\t%s\t%s\n' "$package_name" "$binary_name" "asset preparation failed" >>"$failure_file"
+      echo "FAIL  $package_name ($binary_name): asset preparation failed" >&2
+    fi
   else
     printf '%s\t%s\t%s\n' "$package_name" "$binary_name" "trunk build failed" >>"$failure_file"
     echo "FAIL  $package_name ($binary_name)" >&2

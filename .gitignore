@@ -3,3 +3,7 @@ dist
 /.dist-build.*
 
 outputs
+
+node_modules
+.pnpm-store
+.wrangler

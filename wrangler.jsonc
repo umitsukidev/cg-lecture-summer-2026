@@ -1,0 +1,17 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "cg-lecture-summer-2026",
+    "main": "./worker/index.js",
+    "compatibility_date": "2026-07-27",
+    "assets": {
+        "directory": "./dist",
+        "binding": "ASSETS",
+        "run_worker_first": ["/*.wasm"],
+    },
+    "route": {
+        "custom_domain": true,
+        "pattern": "cg-lecture-summer-2026.umitsuki.dev",
+    },
+    "preview_urls": false,
+    "workers_dev": false,
+}
