@@ -215,7 +215,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             let src_water_amp_label = ui.label("水量");
             ui.add(
-                egui::Slider::new(&mut model.solver.src_water_amp, 0.0..=0.4)
+                egui::Slider::new(&mut model.solver.src_water_amp, 0.0..=1.0)
                     .step_by(0.01)
                     .smart_aim(false)
                     .fixed_decimals(2),
