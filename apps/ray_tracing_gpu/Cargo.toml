@@ -11,3 +11,4 @@ bytemuck.workspace = true
 log.workspace = true
 tracing.workspace = true
 getrandom.workspace = true
+web-time.workspace = true

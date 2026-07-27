@@ -4963,6 +4963,7 @@ dependencies = [
  "nannou",
  "rayon",
  "tracing",
+ "web-time",
 ]
 
 [[package]]
@@ -4975,6 +4976,7 @@ dependencies = [
  "nannou",
  "rayon",
  "tracing",
+ "web-time",
 ]
 
 [[package]]
@@ -6780,6 +6782,7 @@ dependencies = [
  "nannou",
  "opencv",
  "tracing",
+ "web-time",
 ]
 
 [[package]]

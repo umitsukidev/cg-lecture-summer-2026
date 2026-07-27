@@ -15,7 +15,7 @@ use std::sync::{
     Mutex,
     mpsc::{Receiver, Sender},
 };
-use web_time::Instant;
+use web_time::{Duration, Instant};
 
 pub struct Model {
     _window: Entity,
@@ -152,7 +152,7 @@ fn update(app: &App, model: &mut Model) {
 
     model.prev_mouse_pos = if mouse_pressed { Some(mouse_pos) } else { None };
 
-    if model.last_fps_update.elapsed() >= std::time::Duration::from_millis(500) {
+    if model.last_fps_update.elapsed() >= Duration::from_millis(500) {
         model.displayed_fps = app.fps() as f32;
         model.last_fps_update = Instant::now();
     }

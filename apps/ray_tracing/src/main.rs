@@ -12,6 +12,7 @@ use crate::{
 };
 use nannou::{image::RgbaImage, prelude::*};
 use rayon::prelude::*;
+use web_time::Instant;
 
 struct Model {
     window_id: Entity,
@@ -21,7 +22,7 @@ struct Model {
     camera: Camera,
     environment: Material,
     spheres: Vec<Sphere<'static>>,
-    start_time: std::time::Instant,
+    start_time: Instant,
 }
 
 static SAMPLES: u64 = 2048;
@@ -55,7 +56,7 @@ fn model(app: &App) -> Model {
     let texture = app.asset_server().add(image);
 
     let accumulated_radiance = vec![vec3(0.0, 0.0, 0.0); (width * height) as usize];
-    let start_time = std::time::Instant::now();
+    let start_time = Instant::now();
 
     Model {
         window_id,

@@ -11,6 +11,7 @@ use crate::{
 };
 use nannou::{prelude::*, wgpu::util::DeviceExt};
 use std::sync::Arc;
+use web_time::Instant;
 
 static WIDTH: u32 = 1024;
 static HEIGHT: u32 = 1024;
@@ -30,7 +31,7 @@ struct Model {
     _spheres: Vec<Sphere>,
     _environment: Material,
     frame_count: u32,
-    start_time: std::time::Instant,
+    start_time: Instant,
 }
 
 #[repr(C)]
@@ -234,7 +235,7 @@ fn model(app: &App) -> Model {
         .sampler(&sampler)
         .build(device, &render_bind_group_layout);
 
-    let start_time = std::time::Instant::now();
+    let start_time = Instant::now();
 
     Model {
         _window_id: window_id,
