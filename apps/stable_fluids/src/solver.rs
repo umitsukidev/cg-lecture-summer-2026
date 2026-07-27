@@ -28,6 +28,7 @@ pub struct Solver {
     /// [0]: current, [1]: prev
     pub ink: [Array2<InkCell>; 2],
     pub ink_color: Cmykw,
+    pub velocity_dissipation: f32,
     mouse_pressed: bool,
     mouse_pos: Option<Point2>,
     prev_mouse_pos: Option<Point2>,
@@ -49,6 +50,7 @@ impl Solver {
             prs: Array2::zeros((X_N, Y_N)),
             ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), InkCell::default())),
             ink_color: Cmykw::new(0.69, 0.46, 0.0, 0.0, 0.0),
+            velocity_dissipation: 0.1,
             mouse_pressed: false,
             mouse_pos: None,
             prev_mouse_pos: None,
@@ -309,8 +311,10 @@ impl Solver {
                 );
                 let vy = Self::bilinear(s, t, v);
 
-                *u_val = vx;
-                *v_val = vy;
+                let decay = (-self.velocity_dissipation * self.dt).exp();
+
+                *u_val = vx * decay;
+                *v_val = vy * decay;
             })
     }
 

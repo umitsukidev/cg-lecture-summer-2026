@@ -204,6 +204,15 @@ pub fn display_gui(app: &App, model: &mut Model) {
             )
             .labelled_by(src_vel_amp_label.id);
 
+            let velocity_dissipation_label = ui.label("力の減衰率");
+            ui.add(
+                egui::Slider::new(&mut model.solver.velocity_dissipation, 0.0..=1.0)
+                    .step_by(0.01)
+                    .smart_aim(false)
+                    .fixed_decimals(2),
+            )
+            .labelled_by(velocity_dissipation_label.id);
+
             let src_ink_amp_label = ui.label("インク量");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_ink_amp, 0.0..=1.0)
