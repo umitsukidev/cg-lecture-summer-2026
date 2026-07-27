@@ -154,7 +154,12 @@ fn model(app: &App) -> Model {
     let win_w = (width as f32 * scale) as u32;
     let win_h = (height as f32 * scale) as u32;
 
-    let _window = app.new_window().size(win_w, win_h).view(view).build();
+    let _window = app
+        .new_window()
+        .primary()
+        .size(win_w, win_h)
+        .view(view)
+        .build();
 
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(first_image);
     let image = Image::from_dynamic(

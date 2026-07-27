@@ -10,7 +10,12 @@ fn main() {
 }
 
 fn model(app: &App) -> Model {
-    let _window = app.new_window().size(1000, 1000).view(view).build();
+    let _window = app
+        .new_window()
+        .primary()
+        .size(1000, 1000)
+        .view(view)
+        .build();
 
     let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
     let img_path = assets.join("images/skytree.jpg");

@@ -11,7 +11,7 @@ fn main() {
 }
 
 fn model(app: &App) -> Model {
-    let _window = app.new_window().size(512, 512).view(view).build();
+    let _window = app.new_window().primary().size(512, 512).view(view).build();
 
     let width = 512;
     let height = 512;

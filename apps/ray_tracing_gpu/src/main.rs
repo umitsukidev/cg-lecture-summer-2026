@@ -48,7 +48,11 @@ fn main() {
 }
 
 fn model(app: &App) -> Model {
-    let window_id = app.new_window::<Model>().size(WIDTH, HEIGHT).build();
+    let window_id = app
+        .new_window::<Model>()
+        .primary()
+        .size(WIDTH, HEIGHT)
+        .build();
 
     let window = app.window(window_id);
     let device = window.device();

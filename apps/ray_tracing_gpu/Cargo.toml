@@ -10,3 +10,4 @@ rayon.workspace = true
 bytemuck.workspace = true
 log.workspace = true
 tracing.workspace = true
+getrandom.workspace = true

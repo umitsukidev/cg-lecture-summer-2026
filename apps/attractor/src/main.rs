@@ -21,6 +21,7 @@ const TIME_SCALE: f32 = 0.5;
 fn model(app: &App) -> Model {
     let _window = app
         .new_window()
+        .primary()
         .size(1000, 1000)
         .view(view)
         .mouse_pressed(mouse_pressed)

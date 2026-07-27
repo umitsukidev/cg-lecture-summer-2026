@@ -389,6 +389,7 @@ dependencies = [
 name = "attractor"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "rayon",
@@ -2589,6 +2590,7 @@ dependencies = [
 name = "exercise_c"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "tracing",
@@ -3656,6 +3658,7 @@ dependencies = [
 name = "metaball"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "rayon",
@@ -3666,6 +3669,7 @@ dependencies = [
 name = "metaball_exercise_a"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "tracing",
@@ -3675,6 +3679,7 @@ dependencies = [
 name = "metaball_exercise_b"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "tracing",
@@ -3685,6 +3690,7 @@ name = "metaball_with_shader"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "tracing",
@@ -4952,6 +4958,7 @@ checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 name = "ray_tracing"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "rayon",
@@ -4963,6 +4970,7 @@ name = "ray_tracing_gpu"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "rayon",
@@ -5458,6 +5466,7 @@ name = "stable_fluids"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "ndarray",
@@ -6766,6 +6775,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 name = "with_opencv"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.4.3",
  "log",
  "nannou",
  "opencv",

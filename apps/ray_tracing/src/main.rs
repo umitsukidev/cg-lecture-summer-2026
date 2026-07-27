@@ -31,7 +31,12 @@ fn main() {
 }
 
 fn model(app: &App) -> Model {
-    let window_id = app.new_window().size(1024, 1024).view(view).build();
+    let window_id = app
+        .new_window()
+        .primary()
+        .size(1024, 1024)
+        .view(view)
+        .build();
 
     let width = app.window_rect().w() as u32;
     let height = app.window_rect().h() as u32;

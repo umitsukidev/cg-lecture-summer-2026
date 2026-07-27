@@ -17,6 +17,7 @@ ndarray = "0.17.2"
 derive_more = "2.1.1"
 log = "0.4.32"
 tracing = "0.1.44"
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
 
 [workspace.lints.clippy]
 all = "warn"

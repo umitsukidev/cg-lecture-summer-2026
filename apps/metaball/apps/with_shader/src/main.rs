@@ -26,6 +26,7 @@ struct Model {
 fn model(app: &App) -> Model {
     let window_id = app
         .new_window()
+        .primary()
         .size(1024, 1024)
         .mouse_pressed(mouse_pressed)
         .build();

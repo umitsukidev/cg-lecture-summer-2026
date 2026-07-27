@@ -9,3 +9,4 @@ nannou.workspace = true
 opencv.workspace = true
 log.workspace = true
 tracing.workspace = true
+getrandom.workspace = true

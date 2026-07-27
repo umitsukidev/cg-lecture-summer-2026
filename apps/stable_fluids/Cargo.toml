@@ -12,3 +12,4 @@ rayon.workspace = true
 web-time = "1.1.0"
 log.workspace = true
 tracing.workspace = true
+getrandom.workspace = true

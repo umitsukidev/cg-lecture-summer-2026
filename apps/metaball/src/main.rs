@@ -21,6 +21,7 @@ fn model(app: &App) -> Model {
     let height = 1024;
     let window = app
         .new_window()
+        .primary()
         .size(width, height)
         .view(view)
         .mouse_pressed(mouse_pressed)
