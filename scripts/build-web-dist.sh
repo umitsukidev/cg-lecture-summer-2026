@@ -8,6 +8,9 @@
 set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+source_path_root=$(CDPATH= cd -- "${HOME:?HOME is required}" && pwd)
+rust_path_remap_flag="--remap-path-prefix=$source_path_root=source"
+rustflags_separator=$(printf '\037')
 dist_dir="$repo_root/dist"
 cloudflare_max_asset_size=26214400
 metadata_file=$(mktemp "${TMPDIR:-/tmp}/nannou-dist-metadata.XXXXXX")
@@ -57,6 +60,11 @@ prepare_static_assets() {
   while IFS= read -r prepare_wasm_file; do
     prepare_compressed_file="$prepare_wasm_file.br"
     prepare_original_size=$(wc -c <"$prepare_wasm_file" | tr -d ' ')
+
+    if LC_ALL=C grep -a -q -F "$source_path_root" "$prepare_wasm_file"; then
+      echo "error: Wasm contains a local absolute source path: $prepare_wasm_file" >&2
+      return 1
+    fi
 
     if ! brotli \
       --quality=9 \
@@ -218,11 +226,18 @@ EOF
 
   echo "BUILD $package_name ($binary_name)"
   if (
+    if [ -n "${CARGO_ENCODED_RUSTFLAGS:-}" ]; then
+      export CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS}${rustflags_separator}${rust_path_remap_flag}"
+    else
+      export RUSTFLAGS="${RUSTFLAGS:+${RUSTFLAGS} }${rust_path_remap_flag}"
+    fi
+
     cd -- "$package_dir" &&
       trunk build \
         "$input_html" \
         --dist "$build_output" \
         --public-url "./" \
+        --features "tracing/release_max_level_off,log/release_max_level_off" \
         --cargo-profile wasm-release
   )
   then

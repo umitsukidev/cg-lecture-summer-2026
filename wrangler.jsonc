@@ -3,6 +3,10 @@
     "name": "cg-lecture-summer-2026",
     "main": "./worker/index.js",
     "compatibility_date": "2026-07-27",
+    "cache": {
+        "enabled": true,
+        "cross_version_cache": true,
+    },
     "assets": {
         "directory": "./dist",
         "binding": "ASSETS",

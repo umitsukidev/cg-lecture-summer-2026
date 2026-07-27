@@ -16,6 +16,10 @@ Cargo workspace 内の nannou アプリをまとめて Web 向けにビルドす
 
 成功した各アプリのすべての Wasm は、Cloudflare Workers Static Assets の1ファイル25 MiB制限に収まるよう、Brotli圧縮した内容で同じ `.wasm` ファイルへ置き換えられます。Wasmへのリクエストだけは `worker/index.js` が先に処理し、二重圧縮を避けながら `Content-Encoding: br` と `Content-Type: application/wasm` を設定します。圧縮後も25 MiBを超えるアプリや圧縮に失敗したアプリは `dist/` に含まれません。
 
+ハッシュ付きの Wasm レスポンスはブラウザとCloudflare CDNで1年間キャッシュされます。Workers Cachingはデプロイバージョン間でも共有されるため、内容ハッシュが変わらないWasmは次回のデプロイ後もキャッシュを再利用します。
+
+一括Webビルドが使用する `wasm-release` では、依存クレートを含む `log` と `tracing` の出力をコンパイル時にすべて除外します。通常のnative releaseビルドやdebugビルドのログレベルは変わりません。panicはログ機構とは別にブラウザコンソールへ出力されますが、Wasm内のローカルなホーム絶対パスは `source` に置換されます。置換前の絶対パスが残ったWasmは `dist/` に含まれません。
+
 このため `dist/` を通常の静的ファイルサーバーで直接配信することはできません。Cloudflareへのデプロイ前にローカル確認する場合は `pnpm exec wrangler dev` を使用してください。
 
 事前に `brotli`、`cargo`、`trunk`、`python3` と `wasm32-unknown-unknown` ターゲットが必要です。

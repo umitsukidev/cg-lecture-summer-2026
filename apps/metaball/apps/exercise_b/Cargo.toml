@@ -6,3 +6,5 @@ license.workspace = true
 
 [dependencies]
 nannou.workspace = true
+log.workspace = true
+tracing.workspace = true

@@ -7,3 +7,5 @@ license.workspace = true
 [dependencies]
 nannou.workspace = true
 rayon.workspace = true
+log.workspace = true
+tracing.workspace = true

@@ -15,6 +15,8 @@ bytemuck = { version = "1.25.0", features = ["derive"] }
 opencv = "0.99.0"
 ndarray = "0.17.2"
 derive_more = "2.1.1"
+log = "0.4.32"
+tracing = "0.1.44"
 
 [workspace.lints.clippy]
 all = "warn"

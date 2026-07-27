@@ -10,3 +10,5 @@ nannou = { workspace = true, features = ["egui"] }
 ndarray = { workspace = true, features = ["rayon"] }
 rayon.workspace = true
 web-time = "1.1.0"
+log.workspace = true
+tracing.workspace = true

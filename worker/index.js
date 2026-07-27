@@ -19,6 +19,8 @@ export default {
     const headers = new Headers(assetResponse.headers);
     headers.set("Content-Encoding", "br");
     headers.set("Content-Type", "application/wasm");
+    headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    headers.set("Cloudflare-CDN-Cache-Control", "public, max-age=31536000");
 
     return new Response(assetResponse.body, {
       status: assetResponse.status,
