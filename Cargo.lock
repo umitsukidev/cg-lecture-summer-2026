@@ -3756,7 +3756,7 @@ dependencies = [
 [[package]]
 name = "nannou"
 version = "0.20.0"
-source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=b62a4060b95958982d2f2795c12051febd8c6f17#b62a4060b95958982d2f2795c12051febd8c6f17"
 dependencies = [
  "bevy",
  "bevy_egui",
@@ -3777,7 +3777,7 @@ dependencies = [
 [[package]]
 name = "nannou_core"
 version = "0.20.0"
-source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=b62a4060b95958982d2f2795c12051febd8c6f17#b62a4060b95958982d2f2795c12051febd8c6f17"
 dependencies = [
  "glam",
  "num-traits",
@@ -3787,7 +3787,7 @@ dependencies = [
 [[package]]
 name = "nannou_derive"
 version = "0.20.0"
-source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=b62a4060b95958982d2f2795c12051febd8c6f17#b62a4060b95958982d2f2795c12051febd8c6f17"
 dependencies = [
  "quote",
  "syn",
@@ -3796,7 +3796,7 @@ dependencies = [
 [[package]]
 name = "nannou_draw"
 version = "0.20.0"
-source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=b62a4060b95958982d2f2795c12051febd8c6f17#b62a4060b95958982d2f2795c12051febd8c6f17"
 dependencies = [
  "bevy",
  "bitflags 2.13.1",
@@ -3813,7 +3813,7 @@ dependencies = [
 [[package]]
 name = "nannou_wgpu"
 version = "0.20.0"
-source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=b62a4060b95958982d2f2795c12051febd8c6f17#b62a4060b95958982d2f2795c12051febd8c6f17"
 dependencies = [
  "futures",
  "image",
