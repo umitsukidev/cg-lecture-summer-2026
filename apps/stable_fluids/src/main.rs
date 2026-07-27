@@ -48,18 +48,15 @@ fn model(app: &App) -> Model {
     app.set_update_rate(60.0);
 
     let window_rect = app.window_rect();
-
-    let width = window_rect.w() as u32;
-    let height = window_rect.h() as u32;
-
-    let image_buffer = RgbaImage::new(width, height);
+    let image_buffer = RgbaImage::new(X_N as u32, Y_N as u32);
 
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer.clone());
-    let image = Image::from_dynamic(
+    let mut image = Image::from_dynamic(
         dynamic_image,
         true,
         bevy_asset::RenderAssetUsages::default(),
     );
+    image.sampler = ImageSampler::linear();
     let texture = app.asset_server().add(image);
 
     let solver = Solver::new(window_rect);
@@ -97,8 +94,8 @@ fn model(app: &App) -> Model {
 
 fn update(app: &App, model: &mut Model) {
     let window_rect = app.window_rect();
-    let width = window_rect.w() as u32;
-    let height = window_rect.h() as u32;
+    let width = X_N as u32;
+    let height = Y_N as u32;
     let mouse_pressed =
         app.mouse_buttons().pressed(MouseButton::Left) && !app.egui().egui_wants_pointer_input();
     let mouse_pos = app.mouse();

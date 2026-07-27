@@ -389,90 +389,19 @@ impl Solver {
     }
 
     pub fn get_pixel(&self, x: usize, y: usize) -> Rgba<u8> {
-        let width = self.window_rect.w();
-        let height = self.window_rect.h();
-
-        let x = (x as f32 + 0.5) / width;
-        let y = (y as f32 + 0.5) / height;
-
-        let cell_x = (x * X_N as f32).floor() as usize;
-        let cell_y = (y * Y_N as f32).floor() as usize;
-
-        if cell_x == 0 || cell_y == 0 || cell_x >= X_N - 1 || cell_y >= Y_N - 1 {
+        if x == 0 || y == 0 || x >= X_N - 1 || y >= Y_N - 1 {
             return Rgba([255, 255, 255, 255]);
         }
 
-        let inner_x = (x * X_N as f32 - 1.0) / (X_N - 2) as f32;
-        let inner_y = (y * Y_N as f32 - 1.0) / (Y_N - 2) as f32;
-
-        let gx = 1.0 + inner_x * (X_N - 3) as f32;
-        let gy = 1.0 + inner_y * (Y_N - 3) as f32;
-
-        let x0 = gx.floor() as usize;
-        let y0 = gy.floor() as usize;
-        let x1 = (x0 + 1).min(X_N - 2);
-        let y1 = (y0 + 1).min(Y_N - 2);
-
-        let sx = gx - x0 as f32;
-        let sy = gy - y0 as f32;
-
-        let mut color_mass = Cmykw::default();
-
-        for (channel, mass) in color_mass.iter_mut().enumerate() {
-            *mass = Self::bilinear(
-                sx,
-                sy,
-                (
-                    (
-                        self.ink[0][[x0, y0]].color_mass[channel],
-                        self.ink[0][[x0, y1]].color_mass[channel],
-                    ),
-                    (
-                        self.ink[0][[x1, y0]].color_mass[channel],
-                        self.ink[0][[x1, y1]].color_mass[channel],
-                    ),
-                ),
-            );
-        }
-
-        let ink_amount = Self::bilinear(
-            sx,
-            sy,
-            (
-                (
-                    self.ink[0][[x0, y0]].ink_amount,
-                    self.ink[0][[x0, y1]].ink_amount,
-                ),
-                (
-                    self.ink[0][[x1, y0]].ink_amount,
-                    self.ink[0][[x1, y1]].ink_amount,
-                ),
-            ),
-        );
-
-        let water_amount = Self::bilinear(
-            sx,
-            sy,
-            (
-                (
-                    self.ink[0][[x0, y0]].water_amount,
-                    self.ink[0][[x0, y1]].water_amount,
-                ),
-                (
-                    self.ink[0][[x1, y0]].water_amount,
-                    self.ink[0][[x1, y1]].water_amount,
-                ),
-            ),
-        );
-
-        if ink_amount <= 1e-6 {
+        let ink = self.ink[0][[x, y]];
+        if ink.ink_amount <= 1e-6 {
             return Rgba([255, 255, 255, 255]);
         }
 
-        let concentration = ink_amount / (1.0 + water_amount);
+        let concentration = ink.ink_amount / (1.0 + ink.water_amount);
 
-        let [c, m, y, k, w] = color_mass.map(|mass| {
-            let mixed_density = mass / ink_amount;
+        let [c, m, y, k, w] = ink.color_mass.map(|mass| {
+            let mixed_density = mass / ink.ink_amount;
             let effective_density = mixed_density * concentration;
             1.0 - (-effective_density).exp()
         });
