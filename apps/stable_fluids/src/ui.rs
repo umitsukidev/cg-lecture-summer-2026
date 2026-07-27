@@ -215,27 +215,63 @@ pub fn display_gui(app: &App, model: &mut Model) {
             ui.separator();
 
             let ink_color_label = ui.label("インクの色");
-            let ink_color = model.solver.ink_color;
-            let mut ink_color =
-                Color::cmyk(ink_color.c(), ink_color.m(), ink_color.y(), ink_color.k())
-                    .to_srgba()
-                    .to_u8_array_no_alpha();
+            ui.checkbox(&mut model.set_color_by_cmyk, "CMYK");
             ui.group(|ui| {
-                ui.color_edit_button_srgb(&mut ink_color);
+                if !model.set_color_by_cmyk {
+                    let ink_color = model.solver.ink_color;
+                    let mut ink_color =
+                        Color::cmyk(ink_color.c(), ink_color.m(), ink_color.y(), ink_color.k())
+                            .to_srgba()
+                            .to_u8_array_no_alpha();
 
-                let red_label = ui.label("Red");
-                ui.add(egui::Slider::new(&mut ink_color[0], 0..=255))
-                    .labelled_by(red_label.id);
-                let green_label = ui.label("Green");
-                ui.add(egui::Slider::new(&mut ink_color[1], 0..=255))
-                    .labelled_by(green_label.id);
-                let blue_label = ui.label("Blue");
-                ui.add(egui::Slider::new(&mut ink_color[2], 0..=255))
-                    .labelled_by(blue_label.id);
+                    ui.color_edit_button_srgb(&mut ink_color);
+
+                    let red_label = ui.label("Red");
+                    ui.add(egui::Slider::new(&mut ink_color[0], 0..=255))
+                        .labelled_by(red_label.id);
+                    let green_label = ui.label("Green");
+                    ui.add(egui::Slider::new(&mut ink_color[1], 0..=255))
+                        .labelled_by(green_label.id);
+                    let blue_label = ui.label("Blue");
+                    ui.add(egui::Slider::new(&mut ink_color[2], 0..=255))
+                        .labelled_by(blue_label.id);
+
+                    model.solver.ink_color =
+                        Color::srgb_u8(ink_color[0], ink_color[1], ink_color[2]).to_cmyk();
+                } else {
+                    let ink_color = model.solver.ink_color;
+                    let mut color_picker_value =
+                        Color::cmyk(ink_color.c(), ink_color.m(), ink_color.y(), ink_color.k())
+                            .to_srgba()
+                            .to_u8_array_no_alpha();
+
+                    if ui.color_edit_button_srgb(&mut color_picker_value).changed() {
+                        let displayed_color = Color::srgb_u8(
+                            color_picker_value[0],
+                            color_picker_value[1],
+                            color_picker_value[2],
+                        )
+                        .to_cmyk();
+                        model.solver.ink_color = displayed_color;
+                    }
+
+                    let ink_color = &mut model.solver.ink_color;
+
+                    let cyan_label = ui.label("Cyan");
+                    ui.add(egui::Slider::new(ink_color.cyan_mut(), 0.0..=1.0))
+                        .labelled_by(cyan_label.id);
+                    let magenta_label = ui.label("Magenta");
+                    ui.add(egui::Slider::new(ink_color.magenta_mut(), 0.0..=1.0))
+                        .labelled_by(magenta_label.id);
+                    let yellow_label = ui.label("Yellow");
+                    ui.add(egui::Slider::new(ink_color.yellow_mut(), 0.0..=1.0))
+                        .labelled_by(yellow_label.id);
+                    let black_label = ui.label("Black");
+                    ui.add(egui::Slider::new(ink_color.black_mut(), 0.0..=1.0))
+                        .labelled_by(black_label.id);
+                }
             })
             .response
             .labelled_by(ink_color_label.id);
-            model.solver.ink_color =
-                Color::srgb_u8(ink_color[0], ink_color[1], ink_color[2]).to_cmyk();
         });
 }

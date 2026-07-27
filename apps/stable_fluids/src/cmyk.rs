@@ -39,4 +39,27 @@ impl Cmyk {
     pub fn k(&self) -> f32 {
         self.black()
     }
+
+    pub fn cyan_mut(&mut self) -> &mut f32 {
+        &mut self[0]
+    }
+
+    pub fn magenta_mut(&mut self) -> &mut f32 {
+        &mut self[1]
+    }
+
+    pub fn yellow_mut(&mut self) -> &mut f32 {
+        &mut self[2]
+    }
+
+    pub fn black_mut(&mut self) -> &mut f32 {
+        &mut self[3]
+    }
+
+    pub fn to_optical_density(self) -> Self {
+        Self(self.map(|coverage| {
+            let coverage = coverage.clamp(0.0, 1.0 - f32::EPSILON);
+            -(1.0 - coverage).ln()
+        }))
+    }
 }

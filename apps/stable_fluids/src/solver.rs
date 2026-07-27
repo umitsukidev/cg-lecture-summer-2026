@@ -135,6 +135,7 @@ impl Solver {
 
             let mx = mouse_pos.x * X_N as f32 / width;
             let my = mouse_pos.y * Y_N as f32 / height;
+            let ink_density = self.ink_color.to_optical_density();
 
             Zip::indexed(&mut ink_inner).par_for_each(|(i, j), ink_val| {
                 let i = i + 1;
@@ -145,8 +146,8 @@ impl Solver {
                     1.0 - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx, my)) / self.src_rad;
                 let pct = f32::max(pct, 0.0) * self.src_ink_amp;
 
-                for (ink_channel, color) in ink_val.iter_mut().zip(self.ink_color.iter()) {
-                    *ink_channel += pct * color;
+                for (ink_channel, density) in ink_val.iter_mut().zip(ink_density.iter()) {
+                    *ink_channel += pct * density;
                 }
             });
         }
