@@ -1,5 +1,6 @@
 use crate::{
     cmykw::Cmykw,
+    ink_cell::InkCell,
     nannou_utils::{ColorExt, Point2Ext},
 };
 use nannou::{image::Rgba, prelude::*};
@@ -17,6 +18,7 @@ pub struct Solver {
     pub src_rad: f32,
     pub src_vel_amp: f32,
     pub src_ink_amp: f32,
+    pub src_water_amp: f32,
     /// [0]: current, [1]: prev
     pub u: [Array2<f32>; 2],
     /// [0]: current, [1]: prev
@@ -24,7 +26,7 @@ pub struct Solver {
     pub div: Array2<f32>,
     pub prs: Array2<f32>,
     /// [0]: current, [1]: prev
-    pub ink: [Array2<Cmykw>; 2],
+    pub ink: [Array2<InkCell>; 2],
     pub ink_color: Cmykw,
     mouse_pressed: bool,
     mouse_pos: Option<Point2>,
@@ -40,11 +42,12 @@ impl Solver {
             src_rad: 8.0,
             src_vel_amp: 0.1,
             src_ink_amp: 0.1,
+            src_water_amp: 0.0,
             u: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             div: Array2::zeros((X_N, Y_N)),
             prs: Array2::zeros((X_N, Y_N)),
-            ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), Cmykw::default())),
+            ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), InkCell::default())),
             ink_color: Cmykw::new(0.8, 0.2, 0.2, 0.5, 0.0),
             mouse_pressed: false,
             mouse_pos: None,
@@ -144,11 +147,16 @@ impl Solver {
                 // 0.5を足してグリッドの中心に補正
                 let pct =
                     1.0 - pt2(i as f32 + 0.5, j as f32 + 0.5).distance(pt2(mx, my)) / self.src_rad;
-                let pct = f32::max(pct, 0.0) * self.src_ink_amp;
+                let ink_pct = f32::max(pct, 0.0) * self.src_ink_amp;
+                let water_pct = f32::max(pct, 0.0) * self.src_water_amp;
 
-                for (ink_channel, density) in ink_val.iter_mut().zip(ink_density.iter()) {
-                    *ink_channel += pct * density;
+                for (ink_channel, density) in ink_val.color_mass.iter_mut().zip(ink_density.iter())
+                {
+                    *ink_channel += ink_pct * density;
                 }
+
+                ink_val.ink_amount += ink_pct;
+                ink_val.water_amount += water_pct;
             });
         }
     }
@@ -311,16 +319,46 @@ impl Solver {
             let s = px - i0 as f32;
             let t = py - j0 as f32;
 
-            for (channel, ink_curr) in ink_val.iter_mut().enumerate() {
+            for (channel, ink_curr) in ink_val.color_mass.iter_mut().enumerate() {
                 let ink = (
-                    (ink_prev[[i0, j0]][channel], ink_prev[[i0, j1]][channel]),
-                    (ink_prev[[i1, j0]][channel], ink_prev[[i1, j1]][channel]),
+                    (
+                        ink_prev[[i0, j0]].color_mass[channel],
+                        ink_prev[[i0, j1]].color_mass[channel],
+                    ),
+                    (
+                        ink_prev[[i1, j0]].color_mass[channel],
+                        ink_prev[[i1, j1]].color_mass[channel],
+                    ),
                 );
 
                 let ink = Self::bilinear(s, t, ink);
 
                 *ink_curr = ink;
             }
+
+            ink_val.ink_amount = {
+                let ink_amount = (
+                    (ink_prev[[i0, j0]].ink_amount, ink_prev[[i0, j1]].ink_amount),
+                    (ink_prev[[i1, j0]].ink_amount, ink_prev[[i1, j1]].ink_amount),
+                );
+
+                Self::bilinear(s, t, ink_amount)
+            };
+
+            ink_val.water_amount = {
+                let water_amount = (
+                    (
+                        ink_prev[[i0, j0]].water_amount,
+                        ink_prev[[i0, j1]].water_amount,
+                    ),
+                    (
+                        ink_prev[[i1, j0]].water_amount,
+                        ink_prev[[i1, j1]].water_amount,
+                    ),
+                );
+
+                Self::bilinear(s, t, water_amount)
+            };
         })
     }
 
@@ -378,20 +416,67 @@ impl Solver {
         let sx = gx - x0 as f32;
         let sy = gy - y0 as f32;
 
-        let mut ink = Cmykw::default();
+        let mut color_mass = Cmykw::default();
 
-        for (i, channel) in ink.iter_mut().enumerate() {
-            *channel = Self::bilinear(
+        for (channel, mass) in color_mass.iter_mut().enumerate() {
+            *mass = Self::bilinear(
                 sx,
                 sy,
                 (
-                    (self.ink[0][[x0, y0]][i], self.ink[0][[x0, y1]][i]),
-                    (self.ink[0][[x1, y0]][i], self.ink[0][[x1, y1]][i]),
+                    (
+                        self.ink[0][[x0, y0]].color_mass[channel],
+                        self.ink[0][[x0, y1]].color_mass[channel],
+                    ),
+                    (
+                        self.ink[0][[x1, y0]].color_mass[channel],
+                        self.ink[0][[x1, y1]].color_mass[channel],
+                    ),
                 ),
             );
         }
 
-        let [c, m, y, k, w] = ink.map(|value| 1.0 - (-value).exp());
+        let ink_amount = Self::bilinear(
+            sx,
+            sy,
+            (
+                (
+                    self.ink[0][[x0, y0]].ink_amount,
+                    self.ink[0][[x0, y1]].ink_amount,
+                ),
+                (
+                    self.ink[0][[x1, y0]].ink_amount,
+                    self.ink[0][[x1, y1]].ink_amount,
+                ),
+            ),
+        );
+
+        let water_amount = Self::bilinear(
+            sx,
+            sy,
+            (
+                (
+                    self.ink[0][[x0, y0]].water_amount,
+                    self.ink[0][[x0, y1]].water_amount,
+                ),
+                (
+                    self.ink[0][[x1, y0]].water_amount,
+                    self.ink[0][[x1, y1]].water_amount,
+                ),
+            ),
+        );
+
+        if ink_amount <= 1e-6 {
+            return Rgba([255, 255, 255, 255]);
+        }
+
+        let concentration = ink_amount / (1.0 + water_amount);
+
+        let [c, m, y, k, w] = color_mass.map(|mass| {
+            let mixed_density = mass / ink_amount;
+            let effective_density = mixed_density * concentration;
+            1.0 - (-effective_density).exp()
+        });
+
         Rgba(Color::cmykw(c, m, y, k, w).to_srgba().to_u8_array())
     }
 

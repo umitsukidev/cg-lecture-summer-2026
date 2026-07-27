@@ -213,6 +213,15 @@ pub fn display_gui(app: &App, model: &mut Model) {
             )
             .labelled_by(src_ink_amp_label.id);
 
+            let src_water_amp_label = ui.label("水量");
+            ui.add(
+                egui::Slider::new(&mut model.solver.src_water_amp, 0.0..=0.4)
+                    .step_by(0.01)
+                    .smart_aim(false)
+                    .fixed_decimals(2),
+            )
+            .labelled_by(src_water_amp_label.id);
+
             let src_rad_label = ui.label("インクの注入半径");
             ui.add(
                 egui::Slider::new(&mut model.solver.src_rad, 0.01..=20.0)

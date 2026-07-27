@@ -1,5 +1,6 @@
 mod cmyk;
 mod cmykw;
+mod ink_cell;
 mod nannou_utils;
 mod solver;
 mod ui;
