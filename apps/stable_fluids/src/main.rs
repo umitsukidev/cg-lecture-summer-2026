@@ -15,6 +15,7 @@ use std::sync::{
     Mutex,
     mpsc::{Receiver, Sender},
 };
+use web_time::Instant;
 
 pub struct Model {
     _window: Entity,
@@ -27,7 +28,7 @@ pub struct Model {
     prev_mouse_pos: Option<Point2>,
     solver: Solver,
     displayed_fps: f32,
-    last_fps_update: std::time::Instant,
+    last_fps_update: Instant,
     pixel_rx: Mutex<Receiver<Vec<u8>>>,
     pixel_tx: Sender<Vec<u8>>,
     vector_mesh: Mutex<Vec<geom::Tri<(Point3, Color)>>>,
@@ -40,6 +41,7 @@ fn main() {
 fn model(app: &App) -> Model {
     let window = app
         .new_window()
+        .primary()
         .size(1200, 900)
         .resizable(false)
         .key_pressed(key_pressed)
@@ -85,7 +87,7 @@ fn model(app: &App) -> Model {
         prev_mouse_pos: None,
         solver,
         displayed_fps: 0.0,
-        last_fps_update: std::time::Instant::now(),
+        last_fps_update: Instant::now(),
         pixel_rx: Mutex::new(pixel_rx),
         pixel_tx,
         vector_mesh,
@@ -152,7 +154,7 @@ fn update(app: &App, model: &mut Model) {
 
     if model.last_fps_update.elapsed() >= std::time::Duration::from_millis(500) {
         model.displayed_fps = app.fps() as f32;
-        model.last_fps_update = std::time::Instant::now();
+        model.last_fps_update = Instant::now();
     }
 
     if model.display_velocity {

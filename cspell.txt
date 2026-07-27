@@ -41,6 +41,7 @@ STEELBLUE
 tangentspace
 thresholding
 tris
+umitsukidev
 Unorm
 videoio
 wght

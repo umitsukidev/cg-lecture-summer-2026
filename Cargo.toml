@@ -9,7 +9,7 @@ edition = "2024"
 license = "MIT"
 
 [workspace.dependencies]
-nannou = "0.20.0"
+nannou = { git = "https://github.com/umitsukidev/nannou.git", rev = "7503d1876920684b913325259b1d5aedd46fe4cd" }
 rayon = "1.12.0"
 bytemuck = { version = "1.25.0", features = ["derive"] }
 opencv = "0.99.0"

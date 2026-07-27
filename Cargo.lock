@@ -3756,8 +3756,7 @@ dependencies = [
 [[package]]
 name = "nannou"
 version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b6bb89224f323c5219f63eb4bade2b21662926893f9015b83fca828ac7e5401"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
 dependencies = [
  "bevy",
  "bevy_egui",
@@ -3778,8 +3777,7 @@ dependencies = [
 [[package]]
 name = "nannou_core"
 version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2aef095d47dad07d8d7547773e46ae47b34c97bae8488740938f9dd9b71cb72f"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
 dependencies = [
  "glam",
  "num-traits",
@@ -3789,8 +3787,7 @@ dependencies = [
 [[package]]
 name = "nannou_derive"
 version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fe577899c3931d65454b122aab1683756b3a0c9f656dc3e8fc4595bb30464cc"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
 dependencies = [
  "quote",
  "syn",
@@ -3799,8 +3796,7 @@ dependencies = [
 [[package]]
 name = "nannou_draw"
 version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0724cb959deabe5531d8f4f34f1c128bba778d72e1c8337b95421a12663e0b5f"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
 dependencies = [
  "bevy",
  "bitflags 2.13.1",
@@ -3817,8 +3813,7 @@ dependencies = [
 [[package]]
 name = "nannou_wgpu"
 version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31d6e042e3d1eda17522833db73260501e57646361c417d3b353fce56f901a54"
+source = "git+https://github.com/umitsukidev/nannou.git?rev=7503d1876920684b913325259b1d5aedd46fe4cd#7503d1876920684b913325259b1d5aedd46fe4cd"
 dependencies = [
  "futures",
  "image",
@@ -5450,6 +5445,7 @@ dependencies = [
  "nannou",
  "ndarray",
  "rayon",
+ "web-time",
 ]
 
 [[package]]
