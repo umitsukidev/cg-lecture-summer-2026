@@ -16,7 +16,7 @@ use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
 
 fn color_mode_button(ui: &mut egui::Ui, label: &str, selected: bool) -> egui::Response {
-    let button_size = egui::vec2(52.0, ui.spacing().interact_size.y);
+    let button_size = egui::vec2(64.0, ui.spacing().interact_size.y);
     let (rect, response) = ui.allocate_exact_size(button_size, egui::Sense::click());
     let visuals = ui.style().interact(&response);
     let (fill, text_color) = if selected {
@@ -251,21 +251,21 @@ pub fn display_gui(app: &App, model: &mut Model) {
                 .show(ui, |ui| {
                     ui.spacing_mut().item_spacing.x = 1.0;
                     ui.horizontal(|ui| {
-                        if color_mode_button(ui, "CMYK", model.set_color_by_cmyk).clicked() {
-                            model.set_color_by_cmyk = true;
+                        if color_mode_button(ui, "CMYK+W", model.set_color_by_cmykw).clicked() {
+                            model.set_color_by_cmykw = true;
                         }
-                        if color_mode_button(ui, "RGB", !model.set_color_by_cmyk).clicked() {
-                            model.set_color_by_cmyk = false;
+                        if color_mode_button(ui, "RGB", !model.set_color_by_cmykw).clicked() {
+                            model.set_color_by_cmykw = false;
                         }
                     });
                 });
             ui.group(|ui| {
-                if !model.set_color_by_cmyk {
+                if !model.set_color_by_cmykw {
                     let ink_color = model.solver.ink_color;
-                    let mut ink_color =
-                        Color::cmyk(ink_color.c(), ink_color.m(), ink_color.y(), ink_color.k())
-                            .to_srgba()
-                            .to_u8_array_no_alpha();
+                    let cmyk = ink_color.cmyk();
+                    let mut ink_color = Color::cmyk(cmyk.c(), cmyk.m(), cmyk.y(), cmyk.k())
+                        .to_srgba()
+                        .to_u8_array_no_alpha();
 
                     ui.color_edit_button_srgb(&mut ink_color);
 
@@ -279,24 +279,40 @@ pub fn display_gui(app: &App, model: &mut Model) {
                     ui.add(egui::Slider::new(&mut ink_color[2], 0..=255))
                         .labelled_by(blue_label.id);
 
-                    model.solver.ink_color =
-                        Color::srgb_u8(ink_color[0], ink_color[1], ink_color[2]).to_cmyk();
+                    model.solver.ink_color.set_cmyk(
+                        Color::srgb_u8(ink_color[0], ink_color[1], ink_color[2]).to_cmyk(),
+                    );
+                    *model.solver.ink_color.white_mut() = 0.0;
                 } else {
                     let ink_color = model.solver.ink_color;
+                    let cmyk = ink_color.cmyk();
                     let mut color_picker_value =
-                        Color::cmyk(ink_color.c(), ink_color.m(), ink_color.y(), ink_color.k())
+                        Color::cmyk(cmyk.c(), cmyk.m(), cmyk.y(), cmyk.k())
                             .to_srgba()
                             .to_u8_array_no_alpha();
 
-                    if ui.color_edit_button_srgb(&mut color_picker_value).changed() {
-                        let displayed_color = Color::srgb_u8(
-                            color_picker_value[0],
-                            color_picker_value[1],
-                            color_picker_value[2],
-                        )
-                        .to_cmyk();
-                        model.solver.ink_color = displayed_color;
-                    }
+                    ui.horizontal(|ui| {
+                        if ui.color_edit_button_srgb(&mut color_picker_value).changed() {
+                            model.solver.ink_color.set_cmyk(
+                                Color::srgb_u8(
+                                    color_picker_value[0],
+                                    color_picker_value[1],
+                                    color_picker_value[2],
+                                )
+                                .to_cmyk(),
+                            );
+                        }
+
+                        let ink_color = model.solver.ink_color;
+                        let cmyk = ink_color.cmyk();
+                        let preview =
+                            Color::cmykw(cmyk.c(), cmyk.m(), cmyk.y(), cmyk.k(), ink_color.white())
+                                .to_srgba()
+                                .to_u8_array_no_alpha();
+                        let preview = egui::Color32::from_rgb(preview[0], preview[1], preview[2]);
+                        egui::color_picker::show_color(ui, preview, ui.spacing().interact_size)
+                            .on_hover_text("CMYK+W 最終色");
+                    });
 
                     let ink_color = &mut model.solver.ink_color;
 
@@ -312,6 +328,9 @@ pub fn display_gui(app: &App, model: &mut Model) {
                     let black_label = ui.label("Black");
                     ui.add(egui::Slider::new(ink_color.black_mut(), 0.0..=1.0))
                         .labelled_by(black_label.id);
+                    let white_label = ui.label("White");
+                    ui.add(egui::Slider::new(ink_color.white_mut(), 0.0..=1.0))
+                        .labelled_by(white_label.id);
                 }
             })
             .response

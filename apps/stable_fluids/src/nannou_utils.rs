@@ -24,6 +24,7 @@ impl Point2Ext for Point2 {
 #[allow(dead_code)]
 pub trait ColorExt {
     fn cmyk(cyan: f32, magenta: f32, yellow: f32, black: f32) -> Color;
+    fn cmykw(cyan: f32, magenta: f32, yellow: f32, black: f32, white: f32) -> Color;
     fn to_cmyk(self) -> Cmyk;
 }
 
@@ -34,6 +35,29 @@ impl ColorExt for Color {
         let blue = (1.0 - yellow) * (1.0 - black);
 
         Color::srgb(red, green, blue)
+    }
+
+    fn cmykw(cyan: f32, magenta: f32, yellow: f32, black: f32, white: f32) -> Color {
+        let [red, green, blue] = Color::cmyk(cyan, magenta, yellow, black)
+            .to_srgba()
+            .to_f32_array_no_alpha();
+        let white = white.clamp(0.0, 1.0);
+        let color_amount = cyan.clamp(0.0, 1.0)
+            + magenta.clamp(0.0, 1.0)
+            + yellow.clamp(0.0, 1.0)
+            + black.clamp(0.0, 1.0);
+        let total_amount = color_amount + white;
+        let white_ratio = if total_amount > f32::EPSILON {
+            white / total_amount
+        } else {
+            0.0
+        };
+
+        Color::srgb(
+            red + (1.0 - red) * white_ratio,
+            green + (1.0 - green) * white_ratio,
+            blue + (1.0 - blue) * white_ratio,
+        )
     }
 
     fn to_cmyk(self) -> Cmyk {
@@ -56,5 +80,34 @@ impl ColorExt for Color {
         };
 
         Cmyk::new(cyan, magenta, yellow, black)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ColorExt;
+    use nannou::prelude::{Color, ColorToComponents};
+
+    #[test]
+    fn equal_black_and_white_make_middle_gray() {
+        let [red, green, blue] = Color::cmykw(0.0, 0.0, 0.0, 1.0, 1.0)
+            .to_srgba()
+            .to_f32_array_no_alpha();
+
+        for channel in [red, green, blue] {
+            assert!((channel - 0.5).abs() < f32::EPSILON);
+        }
+    }
+
+    #[test]
+    fn zero_white_matches_cmyk() {
+        let cmyk = Color::cmyk(0.8, 0.2, 0.5, 0.3)
+            .to_srgba()
+            .to_f32_array_no_alpha();
+        let cmykw = Color::cmykw(0.8, 0.2, 0.5, 0.3, 0.0)
+            .to_srgba()
+            .to_f32_array_no_alpha();
+
+        assert_eq!(cmykw, cmyk);
     }
 }

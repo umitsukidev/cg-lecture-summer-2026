@@ -1,5 +1,5 @@
 use crate::{
-    cmyk::Cmyk,
+    cmykw::Cmykw,
     nannou_utils::{ColorExt, Point2Ext},
 };
 use nannou::{image::Rgba, prelude::*};
@@ -24,8 +24,8 @@ pub struct Solver {
     pub div: Array2<f32>,
     pub prs: Array2<f32>,
     /// [0]: current, [1]: prev
-    pub ink: [Array2<Cmyk>; 2],
-    pub ink_color: Cmyk,
+    pub ink: [Array2<Cmykw>; 2],
+    pub ink_color: Cmykw,
     mouse_pressed: bool,
     mouse_pos: Option<Point2>,
     prev_mouse_pos: Option<Point2>,
@@ -44,8 +44,8 @@ impl Solver {
             v: std::array::from_fn(|_| Array2::zeros((X_N, Y_N))),
             div: Array2::zeros((X_N, Y_N)),
             prs: Array2::zeros((X_N, Y_N)),
-            ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), Cmyk::default())),
-            ink_color: Cmyk::new(0.8, 0.2, 0.2, 0.5),
+            ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), Cmykw::default())),
+            ink_color: Cmykw::new(0.8, 0.2, 0.2, 0.5, 0.0),
             mouse_pressed: false,
             mouse_pos: None,
             prev_mouse_pos: None,
@@ -378,7 +378,7 @@ impl Solver {
         let sx = gx - x0 as f32;
         let sy = gy - y0 as f32;
 
-        let mut ink = Cmyk::default();
+        let mut ink = Cmykw::default();
 
         for (i, channel) in ink.iter_mut().enumerate() {
             *channel = Self::bilinear(
@@ -391,8 +391,8 @@ impl Solver {
             );
         }
 
-        let [c, m, y, k] = ink.map(|value| 1.0 - (-value).exp());
-        Rgba(Color::cmyk(c, m, y, k).to_srgba().to_u8_array())
+        let [c, m, y, k, w] = ink.map(|value| 1.0 - (-value).exp());
+        Rgba(Color::cmykw(c, m, y, k, w).to_srgba().to_u8_array())
     }
 
     pub fn reset(&mut self) {

@@ -1,4 +1,5 @@
 mod cmyk;
+mod cmykw;
 mod nannou_utils;
 mod solver;
 mod ui;
@@ -21,7 +22,7 @@ pub struct Model {
     show_display_grids: bool,
     show_display_velocity: bool,
     show_gui: bool,
-    set_color_by_cmyk: bool,
+    set_color_by_cmykw: bool,
     prev_mouse_pos: Option<Point2>,
     solver: Solver,
     displayed_fps: f32,
@@ -82,7 +83,7 @@ fn model(app: &App) -> Model {
         show_display_grids: false,
         show_display_velocity: false,
         show_gui: true,
-        set_color_by_cmyk: true,
+        set_color_by_cmykw: true,
         prev_mouse_pos: None,
         solver,
         displayed_fps: 0.0,
