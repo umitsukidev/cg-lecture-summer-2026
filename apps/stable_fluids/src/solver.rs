@@ -152,7 +152,7 @@ impl Solver {
 
             let mx = mouse_pos.x * X_N as f32 / width;
             let my = mouse_pos.y * Y_N as f32 / height;
-            let ink_density = self.ink_color.to_optical_density();
+            let ink_color = self.ink_color;
             let Some((x_start, x_end, y_start, y_end)) = Self::source_bounds(mx, my, self.src_rad)
             else {
                 return;
@@ -170,9 +170,10 @@ impl Solver {
                 let ink_pct = f32::max(pct, 0.0) * self.src_ink_amp;
                 let water_pct = f32::max(pct, 0.0) * self.src_water_amp;
 
-                for (ink_channel, density) in ink_val.color_mass.iter_mut().zip(ink_density.iter())
+                for (color_mass, color_channel) in
+                    ink_val.color_mass.iter_mut().zip(ink_color.iter())
                 {
-                    *ink_channel += ink_pct * density;
+                    *color_mass += ink_pct * color_channel;
                 }
 
                 ink_val.ink_amount += ink_pct;
@@ -418,18 +419,50 @@ impl Solver {
             return Rgba([255, 255, 255, 255]);
         }
 
-        let concentration = ink.ink_amount / (1.0 + ink.water_amount);
+        let [c, m, y, k, w] = ink.color_mass.map(|mass| mass / ink.ink_amount);
+        let [red, green, blue] = Color::cmykw(c, m, y, k, w)
+            .to_srgba()
+            .to_f32_array_no_alpha();
 
-        let [c, m, y, k, w] = ink.color_mass.map(|mass| {
-            let mixed_density = mass / ink.ink_amount;
-            let effective_density = mixed_density * concentration;
-            1.0 - (-effective_density).exp()
-        });
+        let effective_amount = ink.ink_amount / (1.0 + ink.water_amount);
+        let opacity = 1.0 - (-effective_amount).exp();
+        let red = 1.0 + (red - 1.0) * opacity;
+        let green = 1.0 + (green - 1.0) * opacity;
+        let blue = 1.0 + (blue - 1.0) * opacity;
 
-        Rgba(Color::cmykw(c, m, y, k, w).to_srgba().to_u8_array())
+        Rgba(Color::srgb(red, green, blue).to_srgba().to_u8_array())
     }
 
     pub fn reset(&mut self) {
         *self = Self::new(self.window_rect);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Solver, X_N, Y_N};
+    use crate::{cmykw::Cmykw, ink_cell::InkCell, nannou_utils::ColorExt};
+    use nannou::prelude::{Color, ColorToPacked, Rect};
+
+    #[test]
+    fn increasing_ink_amount_converges_to_the_selected_color() {
+        let mut solver = Solver::new(Rect::from_w_h(X_N as f32, Y_N as f32));
+        let color = Cmykw::new(0.8, 0.2, 0.2, 0.5, 0.0);
+        let ink_amount = 100.0;
+        solver.ink[0][[1, 1]] = InkCell {
+            color_mass: Cmykw(color.map(|channel| channel * ink_amount)),
+            ink_amount,
+            water_amount: 0.0,
+        };
+
+        let actual = solver.get_pixel(1, 1).0;
+        let cmyk = color.cmyk();
+        let expected = Color::cmykw(cmyk.c(), cmyk.m(), cmyk.y(), cmyk.k(), color.white())
+            .to_srgba()
+            .to_u8_array();
+
+        for (actual, expected) in actual.into_iter().zip(expected) {
+            assert!(actual.abs_diff(expected) <= 1);
+        }
     }
 }
