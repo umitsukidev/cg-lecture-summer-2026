@@ -199,7 +199,7 @@ fn key_pressed(app: &App, model: &mut Model, key: KeyCode) {
     match key {
         KeyCode::Escape => app.quit(),
         KeyCode::KeyQ => app.quit(),
-        KeyCode::KeyR => model.solver.reset(),
+        KeyCode::KeyR => model.solver.reset_simulation(),
         KeyCode::Space => model.is_simulation_running = !model.is_simulation_running,
         KeyCode::F3 => model.show_gui = !model.show_gui,
         _ => {}

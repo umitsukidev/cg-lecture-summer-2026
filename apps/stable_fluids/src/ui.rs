@@ -242,9 +242,22 @@ pub fn display_gui(app: &App, model: &mut Model) {
             ui.separator();
 
             ui.checkbox(&mut model.is_simulation_running, "シミュレーション");
-            if ui.button("リセット").clicked() {
-                model.solver.reset();
+            if ui.button("流体をリセット").clicked() {
+                model.solver.reset_simulation();
             }
+            let reset_all_button = ui.button("全てリセット");
+            egui::Popup::menu(&reset_all_button)
+                .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+                .show(|ui| {
+                    ui.label("全てリセットしますか？");
+                    if ui.button("リセット").clicked() {
+                        model.solver.reset_all();
+                        ui.close();
+                    }
+                    if ui.button("キャンセル").clicked() {
+                        ui.close();
+                    }
+                });
 
             ui.separator();
 

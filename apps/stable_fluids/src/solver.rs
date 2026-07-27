@@ -434,7 +434,27 @@ impl Solver {
         )
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset_simulation(&mut self) {
+        for velocity in &mut self.u {
+            velocity.fill(0.0);
+        }
+        for velocity in &mut self.v {
+            velocity.fill(0.0);
+        }
+
+        self.div.fill(0.0);
+        self.prs.fill(0.0);
+
+        for ink in &mut self.ink {
+            ink.fill(InkCell::default());
+        }
+
+        self.mouse_pressed = false;
+        self.mouse_pos = None;
+        self.prev_mouse_pos = None;
+    }
+
+    pub fn reset_all(&mut self) {
         *self = Self::new(self.window_rect);
     }
 }
