@@ -197,7 +197,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             let src_vel_amp_label = ui.label("インクの勢い");
             ui.add(
-                egui::Slider::new(&mut model.solver.src_vel_amp, 0.0..=0.4)
+                egui::Slider::new(&mut model.solver.src_vel_amp, 0.0..=1.0)
                     .step_by(0.01)
                     .smart_aim(false)
                     .fixed_decimals(2),
@@ -206,7 +206,7 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             let src_ink_amp_label = ui.label("インク量");
             ui.add(
-                egui::Slider::new(&mut model.solver.src_ink_amp, 0.0..=0.4)
+                egui::Slider::new(&mut model.solver.src_ink_amp, 0.0..=1.0)
                     .step_by(0.01)
                     .smart_aim(false)
                     .fixed_decimals(2),

@@ -184,11 +184,11 @@ fn view(app: &App, model: &Model) {
 
     let window_rect = app.window_rect();
 
-    draw.rect().wh(window_rect.wh()).texture(&model.texture);
-
     if model.show_display_grids {
         display_grids(&draw, window_rect);
     }
+
+    draw.rect().wh(window_rect.wh()).texture(&model.texture);
 
     if model.show_display_velocity {
         display_vector(&draw, &model.vector_mesh);
