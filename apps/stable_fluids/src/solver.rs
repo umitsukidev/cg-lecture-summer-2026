@@ -72,6 +72,23 @@ impl Solver {
         self.advection_ink();
     }
 
+    fn source_bounds(mx: f32, my: f32, radius: f32) -> Option<(usize, usize, usize, usize)> {
+        if mx + radius < 1.0
+            || mx - radius > (X_N - 1) as f32
+            || my + radius < 1.0
+            || my - radius > (Y_N - 1) as f32
+        {
+            return None;
+        }
+
+        let x_start = (mx - radius).floor().clamp(1.0, (X_N - 2) as f32) as usize;
+        let x_end = ((mx + radius).ceil() + 1.0).clamp(1.0, (X_N - 1) as f32) as usize;
+        let y_start = (my - radius).floor().clamp(1.0, (Y_N - 2) as f32) as usize;
+        let y_end = ((my + radius).ceil() + 1.0).clamp(1.0, (Y_N - 1) as f32) as usize;
+
+        (x_start < x_end && y_start < y_end).then_some((x_start, x_end, y_start, y_end))
+    }
+
     fn add_source_velocity(&mut self) {
         let width = self.window_rect.w();
         let height = self.window_rect.h();
@@ -91,19 +108,19 @@ impl Solver {
 
             let mx = mouse_pos.x * X_N as f32 / width;
             let my = mouse_pos.y * Y_N as f32 / height;
+            let Some((x_start, x_end, y_start, y_end)) = Self::source_bounds(mx, my, self.src_rad)
+            else {
+                return;
+            };
 
-            // 壁を取り除く
-            #[allow(clippy::reversed_empty_ranges)]
-            let mut u_inner = self.u[0].slice_mut(s![1..-1, 1..-1]);
-            #[allow(clippy::reversed_empty_ranges)]
-            let mut v_inner = self.v[0].slice_mut(s![1..-1, 1..-1]);
+            let mut u_inner = self.u[0].slice_mut(s![x_start..x_end, y_start..y_end]);
+            let mut v_inner = self.v[0].slice_mut(s![x_start..x_end, y_start..y_end]);
 
             Zip::indexed(&mut u_inner)
                 .and(&mut v_inner)
-                .par_for_each(|(i, j), u_val, v_val| {
-                    // 壁を取り除いたぶんのインデックスの調整
-                    let i = i + 1;
-                    let j = j + 1;
+                .for_each(|(i, j), u_val, v_val| {
+                    let i = i + x_start;
+                    let j = j + y_start;
 
                     // 0.5を足してグリッドの中心に補正
                     let pct = 1.0
@@ -130,19 +147,22 @@ impl Solver {
         }
 
         if let Some(mouse_pos) = self.mouse_pos {
-            #[allow(clippy::reversed_empty_ranges)]
-            let mut ink_inner = self.ink[0].slice_mut(s![1..-1, 1..-1]);
-
             let width = self.window_rect.w();
             let height = self.window_rect.h();
 
             let mx = mouse_pos.x * X_N as f32 / width;
             let my = mouse_pos.y * Y_N as f32 / height;
             let ink_density = self.ink_color.to_optical_density();
+            let Some((x_start, x_end, y_start, y_end)) = Self::source_bounds(mx, my, self.src_rad)
+            else {
+                return;
+            };
 
-            Zip::indexed(&mut ink_inner).par_for_each(|(i, j), ink_val| {
-                let i = i + 1;
-                let j = j + 1;
+            let mut ink_inner = self.ink[0].slice_mut(s![x_start..x_end, y_start..y_end]);
+
+            Zip::indexed(&mut ink_inner).for_each(|(i, j), ink_val| {
+                let i = i + x_start;
+                let j = j + y_start;
 
                 // 0.5を足してグリッドの中心に補正
                 let pct =
