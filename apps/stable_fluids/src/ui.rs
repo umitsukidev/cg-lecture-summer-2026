@@ -190,8 +190,8 @@ pub fn display_gui(app: &App, model: &mut Model) {
 
             ui.separator();
 
-            ui.checkbox(&mut model.show_display_grids, "グリッドを表示");
-            ui.checkbox(&mut model.show_display_velocity, "速度ベクトルを表示");
+            ui.checkbox(&mut model.display_grids, "グリッドを表示");
+            ui.checkbox(&mut model.display_velocity, "速度ベクトルを表示");
 
             ui.separator();
 

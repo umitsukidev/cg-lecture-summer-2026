@@ -20,8 +20,8 @@ pub struct Model {
     _window: Entity,
     texture: Handle<Image>,
     is_simulation_running: bool,
-    show_display_grids: bool,
-    show_display_velocity: bool,
+    display_grids: bool,
+    display_velocity: bool,
     show_gui: bool,
     set_color_by_cmykw: bool,
     prev_mouse_pos: Option<Point2>,
@@ -78,8 +78,8 @@ fn model(app: &App) -> Model {
         _window: window,
         texture,
         is_simulation_running: true,
-        show_display_grids: false,
-        show_display_velocity: false,
+        display_grids: true,
+        display_velocity: false,
         show_gui: true,
         set_color_by_cmykw: true,
         prev_mouse_pos: None,
@@ -155,7 +155,7 @@ fn update(app: &App, model: &mut Model) {
         model.last_fps_update = std::time::Instant::now();
     }
 
-    if model.show_display_velocity {
+    if model.display_velocity {
         let mut mesh_guard = model.vector_mesh.lock().unwrap();
         if mesh_guard.is_empty() {
             let zero_pt = pt3(0.0, 0.0, 0.0);
@@ -184,13 +184,13 @@ fn view(app: &App, model: &Model) {
 
     let window_rect = app.window_rect();
 
-    if model.show_display_grids {
+    if model.display_grids {
         display_grids(&draw, window_rect);
     }
 
     draw.rect().wh(window_rect.wh()).texture(&model.texture);
 
-    if model.show_display_velocity {
+    if model.display_velocity {
         display_vector(&draw, &model.vector_mesh);
     }
 }

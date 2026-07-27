@@ -425,7 +425,7 @@ impl Solver {
             .to_f32_array_no_alpha();
 
         let effective_amount = ink.ink_amount / (1.0 + ink.water_amount);
-        let opacity = 1.0 - (-effective_amount).exp();
+        let opacity = 1.0 - (-effective_amount * 0.5).exp();
 
         Rgba(
             Color::srgba(red, green, blue, opacity)
