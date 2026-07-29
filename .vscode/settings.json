@@ -1,4 +1,7 @@
 {
     "rust-analyzer.runnables.extraArgs": ["--release"],
-    "rust-analyzer.check.command": "clippy"
+    "rust-analyzer.check.command": "clippy",
+    "evenBetterToml.schema.associations": {
+        "Cargo.toml": "https://www.schemastore.org/cargo.json"
+    }
 }
