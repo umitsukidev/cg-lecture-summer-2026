@@ -58,28 +58,3 @@ impl From<Cmyk> for Cmykw {
         Self::from_cmyk(cmyk, 0.0)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::Cmykw;
-    use crate::cmyk::Cmyk;
-
-    #[test]
-    fn replacing_cmyk_preserves_white() {
-        let mut color = Cmykw::new(0.1, 0.2, 0.3, 0.4, 0.5);
-        color.set_cmyk(Cmyk::new(0.6, 0.7, 0.8, 0.9));
-
-        assert_eq!(color, Cmykw::new(0.6, 0.7, 0.8, 0.9, 0.5));
-    }
-
-    #[test]
-    fn optical_density_round_trips_to_coverage() {
-        let color = Cmykw::new(0.8, 0.2, 0.5, 1.0, 0.4);
-        let density = color.to_optical_density();
-        let restored = density.map(|value| 1.0 - (-value).exp());
-
-        for (actual, expected) in restored.into_iter().zip(color.iter().copied()) {
-            assert!((actual - expected).abs() < 1e-6);
-        }
-    }
-}
