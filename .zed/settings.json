@@ -1,0 +1,18 @@
+{
+    "tasks": {
+        "prefer_lsp": true,
+    },
+    "lsp": {
+        "rust-analyzer": {
+            "enable_lsp_tasks": true,
+            "initialization_options": {
+                "check": {
+                    "command": "clippy",
+                },
+                "runnables": {
+                    "extraArgs": ["--release"],
+                },
+            },
+        },
+    },
+}

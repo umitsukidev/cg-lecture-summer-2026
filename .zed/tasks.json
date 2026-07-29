@@ -1,0 +1,8 @@
+[
+    {
+        "label": "cargo run --release",
+        "command": "cargo",
+        "args": ["run", "--release", "--package", "$ZED_CUSTOM_RUST_PACKAGE"],
+        "tags": ["rust-main"],
+    },
+]
