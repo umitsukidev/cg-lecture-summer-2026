@@ -14,9 +14,17 @@ struct Model {
     ball_lines: Vec<Vec<Ball>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 const BALL_COUNT: isize = 1000;
+#[cfg(not(target_arch = "wasm32"))]
 const LINE_COUNT: isize = 350;
-const TIME_SCALE: f32 = 0.5;
+
+#[cfg(target_arch = "wasm32")]
+const BALL_COUNT: isize = 500;
+#[cfg(target_arch = "wasm32")]
+const LINE_COUNT: isize = 175;
+
+const TIME_SCALE: f32 = 1.0;
 
 fn model(app: &App) -> Model {
     let _window = app
@@ -27,10 +35,14 @@ fn model(app: &App) -> Model {
         .mouse_pressed(mouse_pressed)
         .mouse_released(mouse_released)
         .build();
+    app.set_update_rate(60.0);
+
+    let multiplier = app.window_rect().w() / BALL_COUNT as f32;
+
     let ball_lines = (-LINE_COUNT / 2..LINE_COUNT / 2)
         .map(|i| {
             (-BALL_COUNT / 2..BALL_COUNT / 2)
-                .map(|j| Ball::new(pt2(j as f32, i as f32 * 3.0), 1.0))
+                .map(|j| Ball::new(pt2(j as f32 * multiplier, i as f32 * 3.0 * multiplier), 1.0))
                 .collect()
         })
         .collect();
