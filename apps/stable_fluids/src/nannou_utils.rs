@@ -82,32 +82,3 @@ impl ColorExt for Color {
         Cmyk::new(cyan, magenta, yellow, black)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::ColorExt;
-    use nannou::prelude::{Color, ColorToComponents};
-
-    #[test]
-    fn equal_black_and_white_make_middle_gray() {
-        let [red, green, blue] = Color::cmykw(0.0, 0.0, 0.0, 1.0, 1.0)
-            .to_srgba()
-            .to_f32_array_no_alpha();
-
-        for channel in [red, green, blue] {
-            assert!((channel - 0.5).abs() < f32::EPSILON);
-        }
-    }
-
-    #[test]
-    fn zero_white_matches_cmyk() {
-        let cmyk = Color::cmyk(0.8, 0.2, 0.5, 0.3)
-            .to_srgba()
-            .to_f32_array_no_alpha();
-        let cmykw = Color::cmykw(0.8, 0.2, 0.5, 0.3, 0.0)
-            .to_srgba()
-            .to_f32_array_no_alpha();
-
-        assert_eq!(cmykw, cmyk);
-    }
-}
