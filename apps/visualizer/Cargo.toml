@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+nannou = { workspace = true, features = ["egui"] }
+rayon.workspace = true
 
 [lints]
 workspace = true
