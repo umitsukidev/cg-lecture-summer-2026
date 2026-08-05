@@ -20,6 +20,10 @@ pub struct FluidAudioMetrics {
     pub color_velocities: [f32; 5],
     /// Velocity magnitude in 5 spatial zones
     pub spatial_velocities: [f32; 5],
+    /// Integrated momentum (Vector Velocity * Color Mass) per color channel
+    pub color_momentums: [f32; 5],
+    /// Integrated momentum (Vector Velocity * Ink Density Mass) in 5 spatial zones
+    pub spatial_momentums: [f32; 5],
     /// Centroid position (X, Y) normalized in [0.0, 1.0] for color channels
     pub color_positions: [(f32, f32); 5],
     /// Centroid position (X, Y) normalized in [0.0, 1.0] for spatial zones
@@ -480,12 +484,18 @@ impl Solver {
                 let du_dy = (u_grid[[x, y + 1]] - u_grid[[x, y - 1]]) / (2.0 * H);
                 total_vorticity += (dv_dx - du_dy).abs();
 
+                let dilution_factor = 1.0 + cell.water_amount;
+                let effective_ink = amt / dilution_factor;
+
                 for c in 0..5 {
                     let c_mass = cell.color_mass[c];
-                    metrics.color_masses[c] += c_mass;
-                    metrics.color_velocities[c] += c_mass * vel_mag;
-                    metrics.color_positions[c].0 += c_mass * norm_x;
-                    metrics.color_positions[c].1 += c_mass * norm_y;
+                    let c_conc = c_mass / dilution_factor; // True concentration taking water dilution into account!
+                    let c_mom = c_conc * vel_mag;
+
+                    metrics.color_masses[c] += c_conc;
+                    metrics.color_momentums[c] += c_mom;
+                    metrics.color_positions[c].0 += c_conc * norm_x;
+                    metrics.color_positions[c].1 += c_conc * norm_y;
                 }
 
                 let zone_idx = if (x > X_N / 4 && x < X_N * 3 / 4) && (y > Y_N / 4 && y < Y_N * 3 / 4) {
@@ -500,10 +510,11 @@ impl Solver {
                     4 // Bottom-Right
                 };
 
-                metrics.spatial_masses[zone_idx] += amt;
-                metrics.spatial_velocities[zone_idx] += amt * vel_mag;
-                metrics.spatial_positions[zone_idx].0 += amt * norm_x;
-                metrics.spatial_positions[zone_idx].1 += amt * norm_y;
+                let s_mom = effective_ink * vel_mag;
+                metrics.spatial_masses[zone_idx] += effective_ink;
+                metrics.spatial_momentums[zone_idx] += s_mom;
+                metrics.spatial_positions[zone_idx].0 += effective_ink * norm_x;
+                metrics.spatial_positions[zone_idx].1 += effective_ink * norm_y;
             }
         }
 
@@ -515,7 +526,7 @@ impl Solver {
         // Normalize color & spatial velocities and spatial centroid positions
         for i in 0..5 {
             if metrics.color_masses[i] > 1e-4 {
-                metrics.color_velocities[i] /= metrics.color_masses[i];
+                metrics.color_velocities[i] = metrics.color_momentums[i] / metrics.color_masses[i];
                 metrics.color_positions[i].0 /= metrics.color_masses[i];
                 metrics.color_positions[i].1 /= metrics.color_masses[i];
             } else {
@@ -523,7 +534,7 @@ impl Solver {
             }
 
             if metrics.spatial_masses[i] > 1e-4 {
-                metrics.spatial_velocities[i] /= metrics.spatial_masses[i];
+                metrics.spatial_velocities[i] = metrics.spatial_momentums[i] / metrics.spatial_masses[i];
                 metrics.spatial_positions[i].0 /= metrics.spatial_masses[i];
                 metrics.spatial_positions[i].1 /= metrics.spatial_masses[i];
             } else {

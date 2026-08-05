@@ -239,6 +239,7 @@ impl AudioSynth {
         let channels = config.channels() as usize;
 
         let mut phases = [0.0f32; 5];
+        let mut lpf_states = [0.0f32; 5];
         let mut start_freqs = ChordPreset::CMajor9.frequencies();
         let mut target_freqs = start_freqs;
         let mut current_freqs = start_freqs;
@@ -261,6 +262,7 @@ impl AudioSynth {
                             sample_rate,
                             &state,
                             &mut phases,
+                            &mut lpf_states,
                             &mut start_freqs,
                             &mut target_freqs,
                             &mut current_freqs,
@@ -289,6 +291,7 @@ impl AudioSynth {
         sample_rate: f32,
         state: &Arc<Mutex<SharedAudioState>>,
         phases: &mut [f32; 5],
+        lpf_states: &mut [f32; 5],
         start_freqs: &mut [f32; 5],
         target_freqs: &mut [f32; 5],
         current_freqs: &mut [f32; 5],
@@ -430,26 +433,29 @@ impl AudioSynth {
                 let pulse_freq = 1.5 + vel_rate * 6.0;
                 let motion_pulse = 0.88 + 0.12 * (phase * pulse_freq * std::f32::consts::TAU).sin();
 
-                // 4. Position-Driven Timbre Variation (Screen X & Y)
+                // 4. Pure Round Timbre & Dynamic 2D Screen-Coordinate EQ Filtering
                 let (px, py) = voice_positions[i];
                 let px = px.clamp(0.0, 1.0);
                 let py = py.clamp(0.0, 1.0);
 
-                // Fundamental pure sine wave
+                // Fundamental pure, ultra-round sine wave
                 let sine1 = (phase * std::f32::consts::TAU).sin();
 
-                // Top (py -> 0): Sub-octave warmth & depth
-                let sub_sine = ((phase * 0.5) * std::f32::consts::TAU).sin() * (0.35 * (1.0 - py));
+                // Y-Axis (Vertical Position Top -> Bottom): EQ Sub-Bass Boost vs Mid-Clarity Boost
+                // Top (py -> 0): Deep sub-octave bass boost (0.30 * (1 - py))
+                let sub_boost = ((phase * 0.5) * std::f32::consts::TAU).sin() * (0.30 * (1.0 - py));
+                // Bottom (py -> 1): Gentle mid-range clarity boost (0.12 * py)
+                let mid_boost = ((phase * 1.5) % 1.0 * std::f32::consts::TAU).sin() * (0.12 * py);
 
-                // Right (px -> 1): Silky high-octave sine shimmer
-                let high_sine = ((phase * 2.0) % 1.0 * std::f32::consts::TAU).sin() * (0.15 * px);
+                let raw_wave = sine1 * 0.75 + sub_boost + mid_boost;
+                let wave_round = raw_wave * (1.0 - 0.08 * raw_wave * raw_wave);
 
-                // Bottom (py -> 1): Warm 5th harmonic sine overtone
-                let fifth_sine = ((phase * 1.5) % 1.0 * std::f32::consts::TAU).sin() * (0.12 * py);
-
-                // Ultra-round, warm acoustic sine waveform shaping
-                let raw_wave = sine1 * 0.75 + sub_sine + high_sine + fifth_sine;
-                let wave = raw_wave * (1.0 - 0.08 * raw_wave * raw_wave);
+                // X-Axis (Horizontal Position Left -> Right): Dynamic EQ Low-Pass Filter Cutoff Sweep
+                // Left (px -> 0): Dark, muffled LPF cutoff (~600Hz, alpha ~ 0.08)
+                // Right (px -> 1): Open, bright, clear LPF cutoff (~12000Hz, alpha ~ 0.92)
+                let lpf_alpha = 0.08 + (px.powf(1.5)) * 0.84;
+                lpf_states[i] += lpf_alpha * (wave_round - lpf_states[i]);
+                let wave = lpf_states[i];
 
                 sample_val += wave * amp * motion_pulse * 0.22;
             }
@@ -468,38 +474,37 @@ impl AudioSynth {
             state.vorticity = metrics.vorticity;
             state.flow_angle = metrics.flow_angle;
 
-            let max_possible_mass = 50.0;
-            let velocity_threshold = 0.012; // Deadzone threshold for fluid motion
-
             match state.mapping_mode {
                 AudioMappingMode::Spatial => {
                     for i in 0..5 {
                         let vel = metrics.spatial_velocities[i];
+                        let mass = metrics.spatial_masses[i];
                         state.velocity_rates[i] = vel;
                         state.voice_positions[i] = metrics.spatial_positions[i];
 
-                        if vel > velocity_threshold && metrics.spatial_masses[i] > 1e-3 {
-                            let norm_mass = (metrics.spatial_masses[i] / max_possible_mass).clamp(0.0, 1.0);
-                            let motion_factor = ((vel - velocity_threshold) * 4.5).clamp(0.0, 1.0);
-                            state.target_amps[i] = motion_factor * (0.4 + 0.6 * norm_mass.powf(0.5));
-                        } else {
-                            state.target_amps[i] = 0.0;
-                        }
+                        // Normalized Velocity Vector (0.0 ~ 1.0)
+                        let norm_vel = (vel / 0.4).clamp(0.0, 1.0);
+                        // Normalized Effective Ink Concentration (0.0 ~ 1.0)
+                        let norm_mass = (mass / 20.0).clamp(0.0, 1.0);
+
+                        // Dynamic Volume = Vector Velocity * Ink Concentration Mass
+                        state.target_amps[i] = norm_vel * norm_mass;
                     }
                 }
                 AudioMappingMode::ColorMass => {
                     for i in 0..5 {
                         let vel = metrics.color_velocities[i];
+                        let mass = metrics.color_masses[i];
                         state.velocity_rates[i] = vel;
                         state.voice_positions[i] = metrics.color_positions[i];
 
-                        if vel > velocity_threshold && metrics.color_masses[i] > 1e-3 {
-                            let norm_mass = (metrics.color_masses[i] / (max_possible_mass * 0.3)).clamp(0.0, 1.0);
-                            let motion_factor = ((vel - velocity_threshold) * 4.5).clamp(0.0, 1.0);
-                            state.target_amps[i] = motion_factor * (0.4 + 0.6 * norm_mass.powf(0.5));
-                        } else {
-                            state.target_amps[i] = 0.0;
-                        }
+                        // Normalized Velocity Vector (0.0 ~ 1.0)
+                        let norm_vel = (vel / 0.4).clamp(0.0, 1.0);
+                        // Normalized Effective Color Concentration (0.0 ~ 1.0)
+                        let norm_mass = (mass / 10.0).clamp(0.0, 1.0);
+
+                        // Dynamic Volume = Vector Velocity * Color Concentration Mass
+                        state.target_amps[i] = norm_vel * norm_mass;
                     }
                 }
             }

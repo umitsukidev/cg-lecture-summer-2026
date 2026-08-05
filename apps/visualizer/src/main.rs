@@ -8,6 +8,7 @@ mod ui;
 
 use crate::{
     audio::AudioSynth,
+    cmykw::Cmykw,
     solver::{Solver, X_N, Y_N},
     ui::{display_grids, display_gui, display_vector, update_vector_mesh},
 };
@@ -27,6 +28,7 @@ pub struct Model {
     display_velocity: bool,
     show_gui: bool,
     set_color_by_cmykw: bool,
+    pub color_swatches: Vec<Cmykw>,
     prev_mouse_pos: Option<Point2>,
     solver: Solver,
     audio: AudioSynth,
@@ -80,6 +82,20 @@ fn model(app: &App) -> Model {
     initial_mesh.resize(X_N * Y_N, zero_tri);
     let vector_mesh = Mutex::new(initial_mesh);
 
+    let default_swatches = vec![
+        Cmykw::new(1.0, 0.0, 0.0, 0.0, 0.0), // Pure Cyan 100%
+        Cmykw::new(0.0, 1.0, 0.0, 0.0, 0.0), // Pure Magenta 100%
+        Cmykw::new(0.0, 0.0, 1.0, 0.0, 0.0), // Pure Yellow 100%
+        Cmykw::new(0.0, 0.0, 0.0, 1.0, 0.0), // Pure Black 100%
+        Cmykw::new(0.0, 0.0, 0.0, 0.0, 1.0), // Pure White 100%
+        Cmykw::new(0.7, 0.0, 0.0, 0.0, 0.3), // Sky Blue (Cyan 70% + White 30%)
+        Cmykw::new(0.0, 0.7, 0.0, 0.0, 0.3), // Rose Pink (Magenta 70% + White 30%)
+        Cmykw::new(0.0, 0.0, 0.7, 0.0, 0.3), // Sun Gold (Yellow 70% + White 30%)
+        Cmykw::new(0.4, 0.4, 0.0, 0.0, 0.2), // Lavender Violet (Cyan 40% + Magenta 40% + White 20%)
+        Cmykw::new(0.5, 0.0, 0.3, 0.0, 0.2), // Turquoise Teal (Cyan 50% + Yellow 30% + White 20%)
+        Cmykw::new(0.7, 0.5, 0.0, 0.3, 0.1), // Deep Navy (Cyan 70% + Magenta 50% + Black 30% + White 10%)
+    ];
+
     Model {
         _window: window,
         texture,
@@ -88,6 +104,7 @@ fn model(app: &App) -> Model {
         display_velocity: false,
         show_gui: true,
         set_color_by_cmykw: true,
+        color_swatches: default_swatches,
         prev_mouse_pos: None,
         solver,
         audio,
