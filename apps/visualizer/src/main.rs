@@ -1,15 +1,40 @@
+mod audio;
+mod cmyk;
+mod cmykw;
+mod ink_cell;
+mod nannou_utils;
+mod solver;
+mod ui;
+
+use crate::{
+    audio::AudioSynth,
+    solver::{Solver, X_N, Y_N},
+    ui::{display_grids, display_gui, display_vector, update_vector_mesh},
+};
 use nannou::{image::RgbaImage, prelude::*};
 use rayon::prelude::*;
 use std::sync::{
     Mutex,
     mpsc::{Receiver, Sender},
 };
+use web_time::{Duration, Instant};
 
 pub struct Model {
     _window: Entity,
     texture: Handle<Image>,
+    is_simulation_running: bool,
+    display_grids: bool,
+    display_velocity: bool,
+    show_gui: bool,
+    set_color_by_cmykw: bool,
+    prev_mouse_pos: Option<Point2>,
+    solver: Solver,
+    audio: AudioSynth,
+    displayed_fps: f32,
+    last_fps_update: Instant,
     pixel_rx: Mutex<Receiver<Vec<u8>>>,
     pixel_tx: Sender<Vec<u8>>,
+    vector_mesh: Mutex<Vec<geom::Tri<(Point3, Color)>>>,
 }
 
 fn main() {
@@ -22,11 +47,13 @@ fn model(app: &App) -> Model {
         .primary()
         .size(1200, 900)
         .resizable(false)
+        .key_pressed(key_pressed)
         .view(view)
         .build();
     app.set_update_rate(60.0);
 
-    let image_buffer = RgbaImage::new(1200, 900);
+    let window_rect = app.window_rect();
+    let image_buffer = RgbaImage::new(X_N as u32, Y_N as u32);
 
     let dynamic_image = nannou::image::DynamicImage::ImageRgba8(image_buffer.clone());
     let mut image = Image::from_dynamic(
@@ -37,69 +64,163 @@ fn model(app: &App) -> Model {
     image.sampler = ImageSampler::linear();
     let texture = app.asset_server().add(image);
 
+    let solver = Solver::new(window_rect);
+    let audio = AudioSynth::new();
+
     let (pixel_tx, pixel_rx) = std::sync::mpsc::channel();
+
+    let zero_pt = pt3(0.0, 0.0, 0.0);
+    let zero_color = Color::srgb_u8(0, 0, 0);
+    let zero_tri = geom::Tri([
+        (zero_pt, zero_color),
+        (zero_pt, zero_color),
+        (zero_pt, zero_color),
+    ]);
+    let mut initial_mesh = Vec::with_capacity(X_N * Y_N);
+    initial_mesh.resize(X_N * Y_N, zero_tri);
+    let vector_mesh = Mutex::new(initial_mesh);
 
     Model {
         _window: window,
         texture,
+        is_simulation_running: true,
+        display_grids: true,
+        display_velocity: false,
+        show_gui: true,
+        set_color_by_cmykw: true,
+        prev_mouse_pos: None,
+        solver,
+        audio,
+        displayed_fps: 0.0,
+        last_fps_update: Instant::now(),
         pixel_rx: Mutex::new(pixel_rx),
         pixel_tx,
+        vector_mesh,
     }
 }
 
 fn update(app: &App, model: &mut Model) {
     let window_rect = app.window_rect();
+    let width = X_N as u32;
+    let height = Y_N as u32;
+    let mouse_pressed =
+        app.mouse_buttons().pressed(MouseButton::Left) && !app.egui().egui_wants_pointer_input();
+    let mouse_pos = app.mouse();
 
-    let width = window_rect.w() as u32;
-    let height = window_rect.h() as u32;
+    if model.is_simulation_running {
+        model
+            .solver
+            .update_solver(mouse_pressed, mouse_pos, model.prev_mouse_pos);
 
-    let raw_pixels = {
-        let mut pixels = model
-            .pixel_rx
-            .lock()
-            .unwrap()
-            .try_recv()
-            .unwrap_or_else(|_| vec![0; (width * height * 4) as usize]);
-        let expected_size = (width * height * 4) as usize;
-        if pixels.len() != expected_size {
-            pixels.resize(expected_size, 0);
-        }
-        pixels
-    };
+        // Analyze fluid state and update audio synth metrics
+        let metrics = model.solver.analyze_fluid_state();
+        model.audio.update_metrics(&metrics);
 
-    let mut image_buffer = RgbaImage::from_raw(width, height, raw_pixels).unwrap();
+        let raw_pixels = {
+            let mut pixels = model
+                .pixel_rx
+                .lock()
+                .unwrap()
+                .try_recv()
+                .unwrap_or_else(|_| vec![0; (width * height * 4) as usize]);
+            let expected_size = (width * height * 4) as usize;
+            if pixels.len() != expected_size {
+                pixels.resize(expected_size, 0);
+            }
+            pixels
+        };
 
-    image_buffer
-        .as_flat_samples_mut()
-        .samples
-        .par_chunks_mut(4)
-        .enumerate()
-        .for_each(|(_, chunk)| {
-            // let x = index % width as usize;
-            // let y = index / width as usize;
+        let mut image_buffer = RgbaImage::from_raw(width, height, raw_pixels).unwrap();
 
-            let pixel = [0, 0, 0, 0];
+        image_buffer
+            .as_flat_samples_mut()
+            .samples
+            .par_chunks_mut(4)
+            .enumerate()
+            .for_each(|(index, chunk)| {
+                let x = index % width as usize;
+                let y = index / width as usize;
 
-            chunk[0] = pixel[0];
-            chunk[1] = pixel[1];
-            chunk[2] = pixel[2];
-            chunk[3] = pixel[3];
+                let pixel = model.solver.get_pixel(x, y);
+
+                chunk[0] = pixel[0];
+                chunk[1] = pixel[1];
+                chunk[2] = pixel[2];
+                chunk[3] = pixel[3];
+            });
+
+        let pixels = image_buffer.into_raw();
+        let tx = model.pixel_tx.clone();
+        app.modify_image(&model.texture, move |image| {
+            if let Some(old_pixels) = image.data.take() {
+                let _ = tx.send(old_pixels);
+            }
+            image.data = Some(pixels);
         });
+    }
 
-    let pixels = image_buffer.into_raw();
-    let tx = model.pixel_tx.clone();
-    app.modify_image(&model.texture, move |image| {
-        if let Some(old_pixels) = image.data.take() {
-            let _ = tx.send(old_pixels);
+    model.prev_mouse_pos = if mouse_pressed { Some(mouse_pos) } else { None };
+
+    if model.last_fps_update.elapsed() >= Duration::from_millis(500) {
+        model.displayed_fps = app.fps() as f32;
+        model.last_fps_update = Instant::now();
+    }
+
+    if model.display_velocity {
+        let mut mesh_guard = model.vector_mesh.lock().unwrap();
+        if mesh_guard.is_empty() {
+            let zero_pt = pt3(0.0, 0.0, 0.0);
+            let zero_color = Color::srgb_u8(0, 0, 0);
+            let zero_tri = geom::Tri([
+                (zero_pt, zero_color),
+                (zero_pt, zero_color),
+                (zero_pt, zero_color),
+            ]);
+            mesh_guard.resize(X_N * Y_N, zero_tri);
         }
-        image.data = Some(pixels);
-    });
+        let u = model.solver.u[0].view();
+        let v = model.solver.v[0].view();
+        update_vector_mesh(&mut mesh_guard, u, v, window_rect);
+    }
+
+    if model.show_gui {
+        display_gui(app, model);
+    }
 }
 
 fn view(app: &App, model: &Model) {
     let draw = app.draw();
 
+    draw.background().color(WHITE);
+
     let window_rect = app.window_rect();
 
+    if model.display_grids {
+        display_grids(&draw, window_rect);
+    }
+
     draw.rect().wh(window_rect.wh()).texture(&model.texture);
+
+    if model.display_velocity {
+        display_vector(&draw, &model.vector_mesh);
+    }
+}
+
+fn key_pressed(app: &App, model: &mut Model, key: KeyCode) {
+    match key {
+        KeyCode::Escape =>
+        {
+            #[cfg(not(target_arch = "wasm32"))]
+            app.quit()
+        }
+        KeyCode::KeyQ =>
+        {
+            #[cfg(not(target_arch = "wasm32"))]
+            app.quit()
+        }
+        KeyCode::KeyR => model.solver.reset_simulation(),
+        KeyCode::Space => model.is_simulation_running = !model.is_simulation_running,
+        KeyCode::F3 => model.show_gui = !model.show_gui,
+        _ => {}
+    }
 }

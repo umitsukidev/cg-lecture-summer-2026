@@ -5,8 +5,15 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+derive_more.workspace = true
 nannou = { workspace = true, features = ["egui"] }
+cpal = "0.15"
+ndarray = { workspace = true, features = ["rayon"] }
 rayon.workspace = true
+log.workspace = true
+tracing.workspace = true
+getrandom.workspace = true
+web-time.workspace = true
 
 [lints]
 workspace = true
