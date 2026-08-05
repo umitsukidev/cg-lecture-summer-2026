@@ -9,6 +9,8 @@ use ndarray::{Array2, Zip, s};
 pub const X_N: usize = 320;
 pub const Y_N: usize = 240;
 pub const H: f32 = 1.0 / (if X_N > Y_N { X_N } else { Y_N }) as f32;
+/// Darkness used to decide whether a sampled cell belongs to the binary ink area.
+pub const BINARY_INK_CONTRAST_THRESHOLD: f32 = 0.1;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FluidAudioMetrics {
@@ -38,6 +40,10 @@ pub struct FluidAudioMetrics {
     pub flow_angle: f32,
     /// Total ink amount in the system
     pub total_ink: f32,
+    /// Ratio of the rendered ink area whose darkness is above the binary threshold.
+    pub ink_area_ratio: f32,
+    /// Mean darkness against the white background, in the range [0.0, 1.0].
+    pub ink_contrast: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +65,8 @@ pub struct Solver {
     pub ink: [Array2<InkCell>; 2],
     pub ink_color: Cmykw,
     pub velocity_dissipation: f32,
+    /// Per-second exponential fade rate for the ink concentration.
+    pub ink_dissipation: f32,
     mouse_pressed: bool,
     mouse_pos: Option<Point2>,
     prev_mouse_pos: Option<Point2>,
@@ -81,6 +89,7 @@ impl Solver {
             ink: std::array::from_fn(|_| Array2::from_elem((X_N, Y_N), InkCell::default())),
             ink_color: Cmykw::new(0.69, 0.46, 0.0, 0.0, 0.0),
             velocity_dissipation: 0.1,
+            ink_dissipation: 0.02,
             mouse_pressed: false,
             mouse_pos: None,
             prev_mouse_pos: None,
@@ -332,6 +341,7 @@ impl Solver {
         self.ink.swap(0, 1);
 
         let [ink_curr, ink_prev] = &mut self.ink;
+        let ink_decay = (-self.ink_dissipation * self.dt).exp();
 
         #[allow(clippy::reversed_empty_ranges)]
         let mut ink_inner = ink_curr.slice_mut(s![1..-1, 1..-1]);
@@ -392,6 +402,13 @@ impl Solver {
 
                 Self::bilinear(s, t, water_amount)
             };
+
+            // Fade the ink after transport while preserving its CMYKW mixture.
+            // At the default rate, the ink's half-life is about 35 seconds.
+            for color_mass in ink_val.color_mass.iter_mut() {
+                *color_mass *= ink_decay;
+            }
+            ink_val.ink_amount *= ink_decay;
         });
     }
 
@@ -459,6 +476,8 @@ impl Solver {
         let mut total_vorticity = 0.0;
         let mut sum_u = 0.0f32;
         let mut sum_v = 0.0f32;
+        let mut binary_ink_cells = 0.0f32;
+        let mut total_ink_contrast = 0.0f32;
         let sample_step = 2;
 
         for x in (1..X_N - 1).step_by(sample_step) {
@@ -486,6 +505,24 @@ impl Solver {
 
                 let dilution_factor = 1.0 + cell.water_amount;
                 let effective_ink = amt / dilution_factor;
+
+                // Use the same opacity model as get_pixel(), then measure both
+                // the binary area and the continuous darkness of the rendered ink.
+                let opacity = 1.0 - (-effective_ink * 0.5).exp();
+                let darkness = if amt > 1e-6 {
+                    let [c, m, y, k, w] = cell.color_mass.map(|mass| mass / amt);
+                    let [red, green, blue] = Color::cmykw(c, m, y, k, w)
+                        .to_srgba()
+                        .to_f32_array_no_alpha();
+                    let luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+                    opacity * (1.0 - luminance)
+                } else {
+                    0.0
+                };
+                if darkness >= BINARY_INK_CONTRAST_THRESHOLD {
+                    binary_ink_cells += 1.0;
+                }
+                total_ink_contrast += darkness;
 
                 for c in 0..5 {
                     let c_mass = cell.color_mass[c];
@@ -518,10 +555,14 @@ impl Solver {
             }
         }
 
-        let num_samples = ((X_N / sample_step) * (Y_N / sample_step)) as f32;
+        let samples_x = (X_N - 2 + sample_step - 1) / sample_step;
+        let samples_y = (Y_N - 2 + sample_step - 1) / sample_step;
+        let num_samples = (samples_x * samples_y) as f32;
         metrics.avg_velocity = (total_vel_sq / num_samples).sqrt();
         metrics.vorticity = total_vorticity / num_samples;
         metrics.flow_angle = sum_v.atan2(sum_u);
+        metrics.ink_area_ratio = binary_ink_cells / num_samples;
+        metrics.ink_contrast = total_ink_contrast / num_samples;
 
         // Normalize color & spatial velocities and spatial centroid positions
         for i in 0..5 {

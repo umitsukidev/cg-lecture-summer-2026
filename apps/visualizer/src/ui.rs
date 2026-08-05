@@ -228,6 +228,11 @@ pub fn display_gui(app: &App, model: &mut Model) {
                                         ui.label(format!("状態: 保持中 (残り {:.1}s / {:.1}s)", remaining, total_hold));
                                     }
                                 });
+                                ui.label(format!(
+                                    "インク面積 {:.1}% / コントラスト {:.2}",
+                                    audio_state.ink_area_ratio * 100.0,
+                                    audio_state.ink_contrast,
+                                ));
                             }
 
                             ui.horizontal(|ui| {

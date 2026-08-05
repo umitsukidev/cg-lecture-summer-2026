@@ -112,6 +112,13 @@ impl AudioSynth {
         let num_frames = (output.len() / channels) as f32;
         let buffer_duration = num_frames / sample_rate;
 
+        // More visible ink means a shorter chord hold. The area term keeps the
+        // mapping faithful to binary coverage, while contrast distinguishes a
+        // faint wash from a dark mark occupying the same area.
+        let visual_activity = (guard.ink_area_ratio * 0.65 + guard.ink_contrast * 0.35)
+            .clamp(0.0, 1.0);
+        let target_hold_duration = 10.0 - visual_activity * 7.0;
+
         // Auto Chord Rotation with Generative Progression Graph (3~10s Hold, 4s/oct Transition)
         if guard.auto_rotate_chords {
             *phase_elapsed += buffer_duration;
@@ -136,14 +143,17 @@ impl AudioSynth {
                     *is_in_transition = false;
                     *current_freqs = *target_freqs;
 
-                    // Pick random hold duration between 3.0s and 10.0s
-                    *rng_seed = rng_seed.wrapping_mul(1664525).wrapping_add(1013904223);
-                    let norm_rand = (*rng_seed as f32) / (u32::MAX as f32);
-                    *hold_duration = 3.0 + norm_rand * 7.0;
+                    *hold_duration = target_hold_duration;
                 }
             } else {
-                // Holding Phase (Random 3.0s ~ 10.0s duration)
+                // Holding Phase (3.0s ~ 10.0s, controlled by the rendered ink)
                 *current_freqs = *target_freqs;
+
+                // Adapt continuously, but over about half a second so a single
+                // simulation frame does not cause an audible timing jump.
+                let duration_alpha = (buffer_duration / 0.5).clamp(0.0, 1.0);
+                *hold_duration +=
+                    (target_hold_duration - *hold_duration) * duration_alpha;
                 guard.rotation_progress = (*phase_elapsed / *hold_duration).clamp(0.0, 1.0);
                 guard.is_transitioning = false;
 
@@ -269,6 +279,8 @@ impl AudioSynth {
             state.max_velocity = metrics.max_velocity;
             state.vorticity = metrics.vorticity;
             state.flow_angle = metrics.flow_angle;
+            state.ink_area_ratio = metrics.ink_area_ratio;
+            state.ink_contrast = metrics.ink_contrast;
 
             match state.mapping_mode {
                 AudioMappingMode::Spatial => {
