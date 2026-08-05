@@ -12,10 +12,10 @@ pub const H: f32 = 1.0 / (if X_N > Y_N { X_N } else { Y_N }) as f32;
 /// Darkness used to decide whether a sampled cell belongs to the binary ink area.
 pub const BINARY_INK_CONTRAST_THRESHOLD: f32 = 0.1;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct FluidAudioMetrics {
     /// Ink mass per color channel: [C, M, Y, K, W]
-    pub color_masses: [f32; 5],
+    pub color_masses: Cmykw,
     /// Ink mass in 5 spatial zones: [Top-Left, Top-Right, Center, Bottom-Left, Bottom-Right]
     pub spatial_masses: [f32; 5],
     /// Velocity magnitude per color channel
@@ -535,17 +535,18 @@ impl Solver {
                     metrics.color_positions[c].1 += c_conc * norm_y;
                 }
 
-                let zone_idx = if (x > X_N / 4 && x < X_N * 3 / 4) && (y > Y_N / 4 && y < Y_N * 3 / 4) {
-                    2 // Center
-                } else if x <= half_x && y <= half_y {
-                    0 // Top-Left
-                } else if x > half_x && y <= half_y {
-                    1 // Top-Right
-                } else if x <= half_x && y > half_y {
-                    3 // Bottom-Left
-                } else {
-                    4 // Bottom-Right
-                };
+                let zone_idx =
+                    if (x > X_N / 4 && x < X_N * 3 / 4) && (y > Y_N / 4 && y < Y_N * 3 / 4) {
+                        2 // Center
+                    } else if x <= half_x && y <= half_y {
+                        0 // Top-Left
+                    } else if x > half_x && y <= half_y {
+                        1 // Top-Right
+                    } else if x <= half_x && y > half_y {
+                        3 // Bottom-Left
+                    } else {
+                        4 // Bottom-Right
+                    };
 
                 let s_mom = effective_ink * vel_mag;
                 metrics.spatial_masses[zone_idx] += effective_ink;
@@ -555,8 +556,8 @@ impl Solver {
             }
         }
 
-        let samples_x = (X_N - 2 + sample_step - 1) / sample_step;
-        let samples_y = (Y_N - 2 + sample_step - 1) / sample_step;
+        let samples_x = (X_N - 2).div_ceil(sample_step);
+        let samples_y = (Y_N - 2).div_ceil(sample_step);
         let num_samples = (samples_x * samples_y) as f32;
         metrics.avg_velocity = (total_vel_sq / num_samples).sqrt();
         metrics.vorticity = total_vorticity / num_samples;
@@ -575,7 +576,8 @@ impl Solver {
             }
 
             if metrics.spatial_masses[i] > 1e-4 {
-                metrics.spatial_velocities[i] = metrics.spatial_momentums[i] / metrics.spatial_masses[i];
+                metrics.spatial_velocities[i] =
+                    metrics.spatial_momentums[i] / metrics.spatial_masses[i];
                 metrics.spatial_positions[i].0 /= metrics.spatial_masses[i];
                 metrics.spatial_positions[i].1 /= metrics.spatial_masses[i];
             } else {
